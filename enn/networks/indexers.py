@@ -44,10 +44,20 @@ class LayerEnsembleIndexer(base.EpistemicIndexer):
     """Index into an ensemble by integer."""
 
     num_ensembles: Sequence[int]
+    correlated: bool = False,
 
     def __call__(self, key: base.RngKey) -> base.Index:
+
+        keys = jax.random.split(key, len(self.num_ensembles))
+
+        if self.correlated:
+            index = jax.random.randint(keys[0], [], 0, self.num_ensembles[0])
+            return jnp.array(
+                [index for key, num_ensemble in zip(keys, self.num_ensembles)]
+            )
+
         return jnp.array(
-            [jax.random.randint(key, [], 0, num_ensemble) for num_ensemble in self.num_ensembles]
+            [jax.random.randint(key, [], 0, num_ensemble) for key, num_ensemble in zip(keys, self.num_ensembles)]
         )
 
 

@@ -20,7 +20,8 @@ import numpy as np
 import os
 
 # files = glob("single_run_*")
-files = glob("single_run_init_std_1_*")
+# files = glob("single_runs/single_run_test_layer_ensemble*")
+files = glob("single_runs/single_run_test*")
 
 float_fields = [
     "loss",
@@ -196,7 +197,7 @@ def plot_all_single_frames(files):
         plot_single_frame(
             training_frame,
             testing_frame,
-            "single_plot_" + file.replace(".txt", ""),
+            "single_plot_" + file.replace("single_runs/", "").replace(".txt", ""),
         )
 
 

@@ -31,7 +31,9 @@ with open(tex_template_file, "r") as f:
 # files = glob("results_id*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
-files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
+# files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
+# files = glob("results/results_mserr_layer_ensemble*")
+files = glob("results/results_best_selected_val_*")
 
 float_fields = [
     "noise_scale",
@@ -149,6 +151,13 @@ agent_plot_params = {
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
+    "layer_ensemble_cor": {
+        "x": "num_ensembles",
+        "y": "kl",
+        "facet": ["noise_scale", "prior_scale"],
+        "colour": "factor(num_layers)",
+        "shape": "factor(hidden_size)",
+    },
 }
 
 
@@ -208,19 +217,22 @@ summary_select_agent_params = {
     #     "initializer": ["glorot_normal+1"],
     #     "loss_function": ["gaussian"],
     # },
-    # "layer_ensemble": {
+    "layer_ensemble": {
 
-    # }
+    },
+    "layer_ensemble_cor": {
+
+    }
 }
 
 summary_input_dims = [
     # [1],
     # [10],
     # [100],
-    [1000],
+    # [1000],
     # [10, 100],
-    [10, 100, 1000],
-    # [1, 10, 100],
+    # [10, 100, 1000],
+    [1, 10, 100],
     # [1, 10, 100, 1000]
 ]
 
@@ -548,8 +560,8 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
 
         for agent in agent_frames.keys():
 
-            if agent in ["layer_ensemble"]: 
-                continue
+            # if agent in ["layer_ensemble"]: 
+            #     continue
 
             frame = agent_frames[agent]
 
@@ -594,7 +606,7 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
         data["std"].append(min(4, std))
 
     frame = DataFrame(data)
-    frame["agent"] = Categorical(frame["agent"], ["dropout", "bbb", "vnn", "hypermodel", "ensemble"])
+    frame["agent"] = Categorical(frame["agent"], ["dropout", "bbb", "vnn", "hypermodel", "ensemble", "layer_ensemble", "layer_ensemble_cor"])
 
     plot = (
         ggplot(frame)
@@ -671,5 +683,5 @@ def plot_all_hyperexperiment_frames(
 
 for ids in summary_input_dims:
     plot_summary(files, ids)
-# plot_all_hyperexperiment_frames(files)
-# plot_all_single_frames(files)
+plot_all_hyperexperiment_frames(files)
+plot_all_single_frames(files)

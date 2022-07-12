@@ -56,6 +56,7 @@ flags.DEFINE_enum(
         "vnn_lrelu",
         "vnn_lrelu_init",
         "layer_ensemble",
+        "layer_ensemble_cor",
     ],
     "Which agent family.",
 )
@@ -107,7 +108,7 @@ def main(_):
                     agent = agents.VanillaEnnAgent(agent_config.config_ctor())
 
                     log_file_name = (
-                        "single_run_"
+                        "single_runs/single_run_"
                         + FLAGS.experiment_group
                         + ("_" if len(FLAGS.experiment_group) > 0 else "")
                         + FLAGS.agent

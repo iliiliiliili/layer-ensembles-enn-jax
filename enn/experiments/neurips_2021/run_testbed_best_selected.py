@@ -18,7 +18,7 @@
 
 from absl import app
 from absl import flags
-from jax.interpreters.xla import primitive_uses_outfeed
+# from jax.interpreters.xla import primitive_uses_outfeed
 from enn.experiments.neurips_2021 import agent_factories
 from enn.experiments.neurips_2021 import agents
 from enn.experiments.neurips_2021 import load
@@ -57,6 +57,7 @@ flags.DEFINE_enum(
         "vnn_lrelu",
         "vnn_lrelu_init",
         "layer_ensemble",
+        "layer_ensemble_cor",
     ],
     "Which agent family.",
 )
@@ -126,7 +127,7 @@ def main(_):
                         agent = agents.VanillaEnnAgent(agent_config.config_ctor())
 
                         log_file_name = (
-                            "single_run_"
+                            "single_runs/single_run_"
                             + FLAGS.experiment_group
                             + ("_" if len(FLAGS.experiment_group) > 0 else "")
                             + FLAGS.agent

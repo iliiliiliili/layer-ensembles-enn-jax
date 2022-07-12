@@ -94,6 +94,7 @@ class LayerEnsembleNetworkWithPriors(base.EpistemicNetwork):
         prior_scale: float = 1.0,
         module: hk.Module = hk.Linear,
         seed : int = 0,
+        correlated=False,
     ):
 
         def enn_fn(inputs: base.Array, full_index: base.Index) -> base.Output:
@@ -114,7 +115,7 @@ class LayerEnsembleNetworkWithPriors(base.EpistemicNetwork):
             return x
 
         transformed = hk.without_apply_rng(hk.transform(enn_fn))
-        indexer = indexers.LayerEnsembleIndexer(num_ensembles)
+        indexer = indexers.LayerEnsembleIndexer(num_ensembles, correlated)
 
         def apply(
             params: hk.Params, x: base.Array, z: base.Index
