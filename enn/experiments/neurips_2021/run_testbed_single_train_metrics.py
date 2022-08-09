@@ -47,6 +47,7 @@ flags.DEFINE_enum(
     [
         "all",
         "all_old",
+        "all_ens",
         "ensemble",
         "dropout",
         "hypermodel",

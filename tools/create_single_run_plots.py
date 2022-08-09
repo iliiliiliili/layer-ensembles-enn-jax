@@ -21,7 +21,7 @@ import os
 
 # files = glob("single_run_*")
 # files = glob("single_runs/single_run_test_layer_ensemble*")
-files = glob("single_runs/single_run_test*")
+files = glob("single_runs/single_run*")
 
 float_fields = [
     "loss",

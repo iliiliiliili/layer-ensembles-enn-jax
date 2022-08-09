@@ -44,7 +44,7 @@ class LayerEnsembleIndexer(base.EpistemicIndexer):
     """Index into an ensemble by integer."""
 
     num_ensembles: Sequence[int]
-    correlated: bool = False,
+    correlated: bool = False
 
     def __call__(self, key: base.RngKey) -> base.Index:
 

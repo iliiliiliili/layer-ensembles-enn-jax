@@ -118,7 +118,7 @@ class VanillaEnnAgent(testbed_base.TestbedAgent):
                 self.best_kl = kl_quality
                 return False
             else:
-                return True
+                return False # True
 
         self.experiment.train(self.config.num_batches, None if evaluate is None else log_evaluate, log_file_name)
         return extract_enn_sampler(self.experiment)

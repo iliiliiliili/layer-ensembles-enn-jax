@@ -18,7 +18,7 @@
 
 from absl import app
 from absl import flags
-from jax.interpreters.xla import primitive_uses_outfeed
+# from jax.interpreters.xla import primitive_uses_outfeed
 from enn.experiments.neurips_2021 import agent_factories
 from enn.experiments.neurips_2021 import agents
 from enn.experiments.neurips_2021 import load
@@ -48,6 +48,7 @@ flags.DEFINE_enum(
     [
         "all",
         "all_old",
+        "all_ens",
         "ensemble",
         "dropout",
         "hypermodel",
