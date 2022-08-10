@@ -49,6 +49,7 @@ from enn.networks.ensembles import wrap_sequence_as_prior
 #Layer Ensemble
 from enn.networks.layer_ensembles import LayerEnsembleNetworkWithPriors
 from enn.networks.layer_ensembles import LayerEnsembleNetwork
+from enn.networks.layer_ensembles import make_einsum_layer_ensemble_mlp_with_prior_enn
 
 # Gaussian ENN
 from enn.networks.gaussian_enn import GaussianNoiseEnn

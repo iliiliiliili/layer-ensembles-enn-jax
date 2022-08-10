@@ -22,6 +22,8 @@ from plotnine.scales.scale_xy import scale_x_discrete
 from glob import glob
 import re
 
+limit_std = 10
+
 tex_template_file = "tools/tex_table_template.tex"
 
 with open(tex_template_file, "r") as f:
@@ -158,6 +160,13 @@ agent_plot_params = {
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
+    "layer_ensemble_einsum_cor": {
+        "x": "num_ensembles",
+        "y": "kl",
+        "facet": ["noise_scale", "prior_scale"],
+        "colour": "factor(num_layers)",
+        "shape": "factor(hidden_size)",
+    },
 }
 
 
@@ -167,7 +176,7 @@ summary_select_agent_params = {
         "prior_scale": [1.0],
         "num_layers": [2],
         "hidden_size": [50],
-        "num_ensemble": [30],
+        "num_ensemble": [10],
     },
     "dropout": {
         "dropout_rate": [0.05],
@@ -218,10 +227,25 @@ summary_select_agent_params = {
     #     "loss_function": ["gaussian"],
     # },
     "layer_ensemble": {
-
+        "noise_scale": [1.0],
+        "prior_scale": [1.0],
+        "num_layers": [2],
+        "hidden_size": [50],
+        "num_ensembles": [3],
     },
     "layer_ensemble_cor": {
-
+        "noise_scale": [1.0],
+        "prior_scale": [1.0],
+        "num_layers": [2],
+        "hidden_size": [50],
+        "num_ensembles": [10],
+    },
+    "layer_ensemble_einsum_cor": {
+        "noise_scale": [1.0],
+        "prior_scale": [1.0],
+        "num_layers": [2],
+        "hidden_size": [50],
+        "num_ensembles": [10],
     }
 }
 
@@ -603,10 +627,10 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
 
         data["agent"].append(agent)
         data["mean"].append(mean)
-        data["std"].append(min(4, std))
+        data["std"].append(min(limit_std, std))
 
     frame = DataFrame(data)
-    frame["agent"] = Categorical(frame["agent"], ["dropout", "bbb", "vnn", "hypermodel", "ensemble", "layer_ensemble", "layer_ensemble_cor"])
+    frame["agent"] = Categorical(frame["agent"], ["dropout", "bbb", "vnn", "hypermodel", "ensemble", "layer_ensemble", "layer_ensemble_cor", "layer_ensemble_einsum_cor"])
 
     plot = (
         ggplot(frame)
@@ -620,7 +644,7 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
             aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.8, size=1.5,
         )
         + theme(
-            axis_title=element_text(size=15), axis_text=element_text(size=14)
+            axis_title=element_text(size=15), axis_text=element_text(size=8)
         )
         + scale_color_discrete(guide=False)
         + ylab("Mean KL")
@@ -683,5 +707,5 @@ def plot_all_hyperexperiment_frames(
 
 for ids in summary_input_dims:
     plot_summary(files, ids)
-plot_all_hyperexperiment_frames(files)
-plot_all_single_frames(files)
+# plot_all_hyperexperiment_frames(files)
+# plot_all_single_frames(files)

@@ -83,7 +83,7 @@ class VanillaEnnAgent(testbed_base.TestbedAgent):
                 self.config.num_batches, log_freq=self.config.train_log_freq
             ),
             eval_datasets=self.eval_datasets,
-            eval_log_freq=50,
+            eval_log_freq=200,
         )
 
         self.best_kl = None
