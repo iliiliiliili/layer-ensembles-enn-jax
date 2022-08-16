@@ -120,7 +120,7 @@ class VanillaEnnAgent(testbed_base.TestbedAgent):
             else:
                 return False # True
 
-        self.experiment.train(self.config.num_batches, None if evaluate is None else log_evaluate, log_file_name)
+        loss = self.experiment.train(self.config.num_batches, None if evaluate is None else log_evaluate, log_file_name)
         return extract_enn_sampler(self.experiment)
 
 

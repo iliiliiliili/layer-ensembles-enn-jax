@@ -136,6 +136,8 @@ class Experiment(supervised_base.BaseExperiment):
                         }
                     )
                     self.logger.write(metrics)
+        
+        return float(loss_metrics["loss"])
 
     def predict(self, inputs: base.Array, seed: int) -> base.Array:
         """Evaluate the trained model at given inputs."""

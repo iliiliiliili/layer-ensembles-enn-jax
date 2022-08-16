@@ -36,8 +36,8 @@ flags.DEFINE_multi_float(
 flags.DEFINE_multi_float(
     "noise_std", [0.01, 0.1, 1.0], "Additive noise standard deviation."
 )
-flags.DEFINE_multi_integer("seed", [1], "Seeds for testbed problem.")
-# flags.DEFINE_multi_integer("seed", [1, 2, 6, 0, 5, 17, 12, 260, 19, 98], "Seeds for testbed problem.")
+# flags.DEFINE_multi_integer("seed", [1], "Seeds for testbed problem.")
+flags.DEFINE_multi_integer("seed", [1, 2, 6, 0, 5, 17, 12, 260, 19, 98], "Seeds for testbed problem.")
 
 
 # ENN agent
@@ -61,6 +61,8 @@ flags.DEFINE_enum(
         "layer_ensemble",
         "layer_ensemble_cor",
         "layer_ensemble_einsum_cor",
+        "true_layer_ensemble_einsum",
+        "true_layer_ensemble_einsum_cor",
     ],
     "Which agent family.",
 )

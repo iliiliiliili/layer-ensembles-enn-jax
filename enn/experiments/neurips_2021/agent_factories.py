@@ -70,40 +70,6 @@ def make_ensemble_ctor(
     return make_agent_config
 
 
-def make_naive_ensemble_ctor(
-    num_ensemble: int,
-    noise_scale: float,
-    prior_scale: float,
-    hidden_size: int = 50,
-    num_layers: int = 2,
-    seed: int = 0,
-) -> ConfigCtor:
-    """Generate an ensemble agent config."""
-
-    def make_enn(prior: testbed_base.PriorKnowledge) -> enn_base.EpistemicNetwork:
-        output_sizes = list([hidden_size] * num_layers) + [prior.num_classes]
-        return networks.Ensemble(
-            output_sizes=output_sizes,
-            dummy_input=jnp.ones([prior.num_train, prior.input_dim]),
-            num_ensemble=num_ensemble,
-            prior_scale=prior_scale,
-        )
-
-    def make_agent_config() -> agents.VanillaEnnConfig:
-        """Factory method to create agent_config, swap this for different agents."""
-        return agents.VanillaEnnConfig(
-            enn_ctor=make_enn,
-            loss_ctor=enn_losses.gaussian_regression_loss(
-                num_ensemble, noise_scale, l2_weight_decay=0
-            ),
-            num_batches=1000,  # Irrelevant for bandit
-            logger=loggers.make_default_logger("experiment", time_delta=0),
-            seed=seed,
-        )
-
-    return make_agent_config
-
-
 def make_layer_ensemble_ctor(
     num_ensembles: List[int],
     noise_scale: float,
@@ -198,6 +164,84 @@ def make_layer_ensemble_einsum_cor_ctor(
             enn_ctor=make_enn,
             loss_ctor=enn_losses.gaussian_regression_loss(
                 reduce(lambda x, y: x, num_ensembles), noise_scale, l2_weight_decay=0
+            ),
+            num_batches=1000,  # Irrelevant for bandit
+            logger=loggers.make_default_logger("experiment", time_delta=0),
+            seed=seed,
+        )
+
+    return make_agent_config
+
+
+def make_true_layer_ensemble_einsum_cor_ctor(
+    num_ensembles: List[int],
+    noise_scale: float,
+    prior_scale: float,
+    hidden_size: int = 50,
+    num_layers: int = 2,
+    seed: int = 0,
+) -> ConfigCtor:
+    """Generate an ensemble agent config."""
+
+    def make_enn(prior: testbed_base.PriorKnowledge) -> enn_base.EpistemicNetwork:
+        output_sizes = list([hidden_size] * num_layers) + [prior.num_classes]
+        return networks.make_true_einsum_layer_ensemble_mlp_with_prior_enn(
+            output_sizes=output_sizes,
+            num_ensembles=num_ensembles,
+            prior_scale=prior_scale,
+            dummy_input=jnp.ones([prior.num_train, prior.input_dim]),
+            dummy_index=jnp.zeros([len(num_ensembles)]),
+            correlated=True,
+        )
+
+    def make_agent_config() -> agents.VanillaEnnConfig:
+        """Factory method to create agent_config, swap this for different agents."""
+        return agents.VanillaEnnConfig(
+            enn_ctor=make_enn,
+            loss_ctor=enn_losses.gaussian_regression_loss(
+                reduce(lambda x, y: x, num_ensembles), noise_scale, l2_weight_decay=0
+            ),
+            num_batches=1000,  # Irrelevant for bandit
+            logger=loggers.make_default_logger("experiment", time_delta=0),
+            seed=seed,
+        )
+
+    return make_agent_config
+
+
+def make_true_layer_ensemble_einsum_ctor(
+    num_ensembles: List[int],
+    noise_scale: float,
+    prior_scale: float,
+    hidden_size: int = 50,
+    num_layers: int = 2,
+    sample_type: str = "full",
+    seed: int = 0,
+) -> ConfigCtor:
+    """Generate an ensemble agent config."""
+
+    num_samples = reduce(lambda x, y: x * y, num_ensembles)
+
+    if num_samples != "full":
+        num_samples = int(sample_type) * num_ensembles[0]
+
+    def make_enn(prior: testbed_base.PriorKnowledge) -> enn_base.EpistemicNetwork:
+        output_sizes = list([hidden_size] * num_layers) + [prior.num_classes]
+        return networks.make_true_einsum_layer_ensemble_mlp_with_prior_enn(
+            output_sizes=output_sizes,
+            num_ensembles=num_ensembles,
+            prior_scale=prior_scale,
+            dummy_input=jnp.ones([prior.num_train, prior.input_dim]),
+            dummy_index=jnp.zeros([len(num_ensembles)]),
+            # correlated=True,
+        )
+
+    def make_agent_config() -> agents.VanillaEnnConfig:
+        """Factory method to create agent_config, swap this for different agents."""
+        return agents.VanillaEnnConfig(
+            enn_ctor=make_enn,
+            loss_ctor=enn_losses.gaussian_regression_loss(
+                num_samples, noise_scale, l2_weight_decay=0
             ),
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
@@ -423,7 +467,7 @@ def make_ensemble_sweep() -> List[AgentCtorConfig]:
     sweep = []
 
     # Adding reasonably interesting ensemble agents
-    for num_ensemble in [3, 10]:
+    for num_ensemble in [3, 10, 30]:
     # for num_ensemble in [1, 3, 10, 30]:
         for noise_scale in [0, 1]:
             for prior_scale in [0, 1]:
@@ -489,10 +533,34 @@ def make_layer_ensemble_cor_sweep() -> List[AgentCtorConfig]:
 
     # Adding reasonably interesting ensemble agents
     # for num_ensemble in [2, 3]:
-    for num_ensemble in [3, 10]:
+    for num_ensemble, sample_type in [
+        (2, "full"),
+        (2, 2),
+        (2, 3),
+        (3, "full"),
+        (3, 2),
+        (3, 3),
+        (5, "full"),
+        (5, 2),
+        (5, 3),
+        (6, "full"),
+        (6, 2),
+        (6, 3),
+        (8, "full"),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (10, "full"),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (30, 2),
+        (30, 3),
+        (30, 4),
+    ]:
         for noise_scale in [0, 1]:
             for prior_scale in [0, 1]:
-                for num_layers in [2, 3]:
+                for num_layers in [2]:
                     for hidden_size in [50]:
 
                         num_ensembles = [num_ensemble for _ in range(num_layers + 1)]
@@ -505,7 +573,7 @@ def make_layer_ensemble_cor_sweep() -> List[AgentCtorConfig]:
                             "num_layers": num_layers,
                             "hidden_size": hidden_size,
                         }
-                        config_ctor = make_layer_ensemble_cor_ctor(
+                        config_ctor = make_layer_ensemble_ctor(
                             num_ensembles,
                             noise_scale,
                             prior_scale,
@@ -540,6 +608,101 @@ def make_layer_ensemble_einsum_cor_sweep() -> List[AgentCtorConfig]:
                             "hidden_size": hidden_size,
                         }
                         config_ctor = make_layer_ensemble_einsum_cor_ctor(
+                            num_ensembles,
+                            noise_scale,
+                            prior_scale,
+                            hidden_size,
+                            num_layers,
+                        )
+                        sweep.append(AgentCtorConfig(settings, config_ctor))
+
+    return sweep
+
+
+
+def make_true_layer_ensemble_einsum_cor_sweep() -> List[AgentCtorConfig]:
+    """Generates the benchmark sweep for paper results."""
+    sweep = []
+
+    # Adding reasonably interesting ensemble agents
+    # for num_ensemble in [2, 3]:
+    for num_ensemble, sample_type in [
+        (2, "full"),
+        (2, 2),
+        (2, 3),
+        (3, "full"),
+        (3, 2),
+        (3, 3),
+        (5, "full"),
+        (5, 2),
+        (5, 3),
+        (6, "full"),
+        (6, 2),
+        (6, 3),
+        (8, "full"),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (10, "full"),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (30, 2),
+        (30, 3),
+        (30, 4),
+    ]:
+        for noise_scale in [0, 1]:
+            for prior_scale in [0, 1]:
+                for num_layers in [2]:
+                    for hidden_size in [50]:
+
+                        num_ensembles = [num_ensemble for _ in range(num_layers + 1)]
+
+                        settings = {
+                            "agent": "true_layer_ensemble_einsum_cor",
+                            "num_ensembles": num_ensembles,
+                            "sample_type": str(sample_type),
+                            "noise_scale": noise_scale,
+                            "prior_scale": prior_scale,
+                            "num_layers": num_layers,
+                            "hidden_size": hidden_size,
+                        }
+                        config_ctor = make_true_layer_ensemble_einsum_ctor(
+                            num_ensembles,
+                            noise_scale,
+                            prior_scale,
+                            hidden_size,
+                            num_layers,
+                            sample_type,
+                        )
+                        sweep.append(AgentCtorConfig(settings, config_ctor))
+
+    return sweep
+
+
+def make_true_layer_ensemble_einsum_sweep() -> List[AgentCtorConfig]:
+    """Generates the benchmark sweep for paper results."""
+    sweep = []
+
+    # Adding reasonably interesting ensemble agents
+    # for num_ensemble in [2, 3]:
+    for num_ensemble in [2, 3, 4, 5]:
+        for noise_scale in [0, 1]:
+            for prior_scale in [0, 1]:
+                for num_layers in [2, 3]:
+                    for hidden_size in [50]:
+
+                        num_ensembles = [num_ensemble for _ in range(num_layers + 1)]
+
+                        settings = {
+                            "agent": "true_layer_ensemble_einsum",
+                            "num_ensembles": num_ensembles,
+                            "noise_scale": noise_scale,
+                            "prior_scale": prior_scale,
+                            "num_layers": num_layers,
+                            "hidden_size": hidden_size,
+                        }
+                        config_ctor = make_true_layer_ensemble_einsum_ctor(
                             num_ensembles,
                             noise_scale,
                             prior_scale,
@@ -879,6 +1042,10 @@ def make_agent_sweep(agent: str = "all") -> Sequence[AgentCtorConfig]:
         agent_sweep = make_layer_ensemble_cor_sweep()
     elif agent == "layer_ensemble_einsum_cor":
         agent_sweep = make_layer_ensemble_einsum_cor_sweep()
+    elif agent == "true_layer_ensemble_einsum":
+        agent_sweep = make_true_layer_ensemble_einsum_sweep()
+    elif agent == "true_layer_ensemble_einsum_cor":
+        agent_sweep = make_true_layer_ensemble_einsum_cor_sweep()
     else:
         raise ValueError(f"agent={agent} is not valid!")
 

@@ -60,20 +60,20 @@ int_list_fields = [
 ]
 
 field_tex_names = {
-    "kl" : "KL",
-    "kl_variance" : "Var[KL|seed]",
-    "agent" : "Type",
-    "mean" : "Mean[KL]",
-    "kl_std" : "Var[KL]",
-    "std" : "Var[KL]",
-    "noise_scale" : "NS",
-    "prior_scale" : "PS",
-    "dropout_rate" : "DR",
-    "regularization_scale" : "RS",
-    "sigma_0" : "\\sigma_0",
-    "learning_rate" : "LR",
-    "mean_error" : "E_{\\mu}",
-    "std_error" : "E_{\\sigma}",
+    "kl": "KL",
+    "kl_variance": "Var[KL|seed]",
+    "agent": "Type",
+    "mean": "Mean[KL]",
+    "kl_std": "Var[KL]",
+    "std": "Var[KL]",
+    "noise_scale": "NS",
+    "prior_scale": "PS",
+    "dropout_rate": "DR",
+    "regularization_scale": "RS",
+    "sigma_0": "\\sigma_0",
+    "learning_rate": "LR",
+    "mean_error": "E_{\\mu}",
+    "std_error": "E_{\\sigma}",
     "num_ensemble": "Ens",
     "num_ensembles": "Ens",
     "num_layers": "Depth",
@@ -167,6 +167,20 @@ agent_plot_params = {
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
+    "true_layer_ensemble_einsum": {
+        "x": "num_ensembles",
+        "y": "kl",
+        "facet": ["noise_scale", "prior_scale"],
+        "colour": "factor(num_layers)",
+        "shape": "factor(hidden_size)",
+    },
+    "true_layer_ensemble_einsum_cor": {
+        "x": "num_ensembles",
+        "y": "kl",
+        "facet": ["noise_scale", "prior_scale"],
+        "colour": "factor(num_layers)",
+        "shape": "factor(hidden_size)",
+    },
 }
 
 
@@ -176,7 +190,7 @@ summary_select_agent_params = {
         "prior_scale": [1.0],
         "num_layers": [2],
         "hidden_size": [50],
-        "num_ensemble": [10],
+        "num_ensemble": [30],
     },
     "dropout": {
         "dropout_rate": [0.05],
@@ -231,7 +245,7 @@ summary_select_agent_params = {
         "prior_scale": [1.0],
         "num_layers": [2],
         "hidden_size": [50],
-        "num_ensembles": [3],
+        "num_ensembles": [5],
     },
     "layer_ensemble_cor": {
         "noise_scale": [1.0],
@@ -246,7 +260,21 @@ summary_select_agent_params = {
         "num_layers": [2],
         "hidden_size": [50],
         "num_ensembles": [10],
-    }
+    },
+    "true_layer_ensemble_einsum": {
+        "noise_scale": [1.0],
+        "prior_scale": [1.0],
+        "num_layers": [2],
+        "hidden_size": [50],
+        "num_ensembles": [5],
+    },
+    "true_layer_ensemble_einsum_cor": {
+        "noise_scale": [1.0],
+        "prior_scale": [1.0],
+        "num_layers": [2],
+        "hidden_size": [50],
+        "num_ensembles": [10],
+    },
 }
 
 summary_input_dims = [
@@ -338,15 +366,20 @@ def create_tex_table(frame, agent, output_file_name):
 
     for key in frame.keys():
         fields.append(field_tex_names[key])
-        mode.append('c')
+        mode.append("c")
 
         if key not in to_describe:
             to_describe.append(key)
 
     fields = "    " + " & ".join(fields) + "\\\\ [0.5ex] \n        \\hline"
     mode = "|" + " ".join(mode) + "|"
-    caption = ", ".join([str(field_tex_names[key]) + ":" + str(key).replace("_", " ") for key in to_describe])
-    
+    caption = ", ".join(
+        [
+            str(field_tex_names[key]) + ":" + str(key).replace("_", " ")
+            for key in to_describe
+        ]
+    )
+
     table = [fields]
 
     for i in range(len(frame)):
@@ -359,14 +392,16 @@ def create_tex_table(frame, agent, output_file_name):
                 val = "{:.4f}".format(val)
 
             line.append(str(val))
-        
+
         line = " & ".join(line) + " \\\\"
         table.append(line)
 
     table = "\n        ".join(table)
 
-    tex_file = (tex_file
-        .replace("<TITLE>", (agent + " in " + output_file_name).replace("_", " "))
+    tex_file = (
+        tex_file.replace(
+            "<TITLE>", (agent + " in " + output_file_name).replace("_", " ")
+        )
         .replace("<CAPTION>", caption)
         .replace("<MODE>", mode)
         .replace("<TABLE>", table)
@@ -415,8 +450,7 @@ def plot_multiple_frames(frames, agent, output_file_name):
     result = frames[0].copy()
     result[params["y"]] = sum(f[params["y"]] for f in frames) / len(frames)
     std = (
-        sum((f[params["y"]] - result[params["y"]]) ** 2 for f in frames)
-        / len(frames)
+        sum((f[params["y"]] - result[params["y"]]) ** 2 for f in frames) / len(frames)
     ) ** 0.5
     result[params["y"] + "_std"] = std
 
@@ -444,7 +478,7 @@ def plot_multiple_frames(frames, agent, output_file_name):
             aes(
                 **point_aes_params,
                 ymin=params["y"] + "-" + params["y"] + "_std",
-                ymax=params["y"] + "+" + params["y"] + "_std"
+                ymax=params["y"] + "+" + params["y"] + "_std",
             ),
             position=dodge,
             width=0.8,
@@ -467,7 +501,10 @@ def plot_all_single_frames(files):
             plot_single_frame(
                 frame,
                 agent,
-                "enn_plot_" + agent + "_" + file.replace(".txt", "").replace("results/", ""),
+                "enn_plot_"
+                + agent
+                + "_"
+                + file.replace(".txt", "").replace("results/", ""),
             )
 
 
@@ -493,9 +530,7 @@ def plot_all_total_frames(files):
 def parse_enn_experiment_parameters(file):
 
     param_string = file.split("_")[-1]
-    input_dim, data_ratio, noise_std = re.findall(
-        r"\d+(?:\.\d+|\d*)", param_string
-    )
+    input_dim, data_ratio, noise_std = re.findall(r"\d+(?:\.\d+|\d*)", param_string)
 
     input_dim = int(input_dim)
     data_ratio = float(data_ratio)
@@ -508,7 +543,11 @@ def parse_enn_experiment_parameters(file):
     }
 
 
-def plot_summary_vnn(files, allowed_input_dims, parse_experiment_parameters=parse_enn_experiment_parameters):
+def plot_summary_vnn(
+    files,
+    allowed_input_dims,
+    parse_experiment_parameters=parse_enn_experiment_parameters,
+):
 
     all_agent_frames = {}
 
@@ -516,13 +555,13 @@ def plot_summary_vnn(files, allowed_input_dims, parse_experiment_parameters=pars
         agent_frames = read_data(file)
         experiment_params = parse_experiment_parameters(file)
 
-        if (experiment_params["input_dim"] not in allowed_input_dims):
+        if experiment_params["input_dim"] not in allowed_input_dims:
             print("scipping file", file, "due to input dim filter")
             continue
 
         for agent in agent_frames.keys():
 
-            if agent not in ["vnn", "vnn_lrelu"]: 
+            if agent not in ["vnn", "vnn_lrelu"]:
                 continue
 
             frame = agent_frames[agent]
@@ -546,7 +585,7 @@ def plot_summary_vnn(files, allowed_input_dims, parse_experiment_parameters=pars
         for id in range(len(frames[0])):
 
             mean = sum(f[params["y"]][id] for f in frames) / len(frames)
-            std = sum((f[params["y"]][id] - mean) **2 for f in frames) / len(frames)
+            std = sum((f[params["y"]][id] - mean) ** 2 for f in frames) / len(frames)
             data["agent"].append(agent + str(id))
             data["mean"].append(mean)
             data["std"].append(std)
@@ -565,12 +604,27 @@ def plot_summary_vnn(files, allowed_input_dims, parse_experiment_parameters=pars
             aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.8
         )
     )
-    plot.save("plots/summary_vnn_plot_id" + "_".join([str(a) for a in allowed_input_dims]) + ".png", dpi=600)
-    frame.to_csv("plots/summary_vnn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv")
-    create_tex_table(frame, "all", "summary_vnn_plot_id" + "_".join([str(a) for a in allowed_input_dims]))
+    plot.save(
+        "plots/summary_vnn_plot_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".png",
+        dpi=600,
+    )
+    frame.to_csv(
+        "plots/summary_vnn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+    )
+    create_tex_table(
+        frame,
+        "all",
+        "summary_vnn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+    )
 
 
-def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_enn_experiment_parameters):
+def plot_summary(
+    files,
+    allowed_input_dims,
+    parse_experiment_parameters=parse_enn_experiment_parameters,
+):
 
     all_agent_frames = {}
 
@@ -578,13 +632,13 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
         agent_frames = read_data(file)
         experiment_params = parse_experiment_parameters(file)
 
-        if (experiment_params["input_dim"] not in allowed_input_dims):
+        if experiment_params["input_dim"] not in allowed_input_dims:
             print("scipping file", file, "due to input dim filter")
             continue
 
         for agent in agent_frames.keys():
 
-            # if agent in ["layer_ensemble"]: 
+            # if agent in ["layer_ensemble"]:
             #     continue
 
             frame = agent_frames[agent]
@@ -610,7 +664,7 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
         filters = summary_select_agent_params[agent]
 
         frames = all_frames
-        old_frames=None
+        old_frames = None
 
         for key, value in filters.items():
             old_frames = frames
@@ -618,9 +672,7 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
             if len(frames[0]) <= 0:
                 raise ValueError("Empty frame after filtering")
 
-        mean = sum(sum(f[params["y"]]) for f in frames) / sum(
-            len(f) for f in frames
-        )
+        mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
         std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
             len(f) for f in frames
         )
@@ -630,7 +682,21 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
         data["std"].append(min(limit_std, std))
 
     frame = DataFrame(data)
-    frame["agent"] = Categorical(frame["agent"], ["dropout", "bbb", "vnn", "hypermodel", "ensemble", "layer_ensemble", "layer_ensemble_cor", "layer_ensemble_einsum_cor"])
+    frame["agent"] = Categorical(
+        frame["agent"],
+        [
+            "dropout",
+            "bbb",
+            "vnn",
+            "hypermodel",
+            "ensemble",
+            "layer_ensemble",
+            "layer_ensemble_cor",
+            "layer_ensemble_einsum_cor",
+            "true_layer_ensemble_einsum",
+            "true_layer_ensemble_einsum_cor",
+        ],
+    )
 
     plot = (
         ggplot(frame)
@@ -643,16 +709,25 @@ def plot_summary(files, allowed_input_dims, parse_experiment_parameters=parse_en
         + geom_errorbar(
             aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.8, size=1.5,
         )
-        + theme(
-            axis_title=element_text(size=15), axis_text=element_text(size=8)
-        )
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=4))
         + scale_color_discrete(guide=False)
         + ylab("Mean KL")
-        + xlab("Method") 
+        + xlab("Method")
     )
-    plot.save("plots/summary_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]) + ".png", dpi=600)
-    frame.to_csv("plots/summary_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv")
-    create_tex_table(frame, "all", "summary_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]))
+    plot.save(
+        "plots/summary_enn_plot_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".png",
+        dpi=600,
+    )
+    frame.to_csv(
+        "plots/summary_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+    )
+    create_tex_table(
+        frame,
+        "all",
+        "summary_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+    )
 
 
 def plot_all_hyperexperiment_frames(
@@ -687,19 +762,13 @@ def plot_all_hyperexperiment_frames(
 
             all_experiment_agent_frames[key][agent].append(frame)
 
-    for (
-        experiment_param,
-        all_agent_frames,
-    ) in all_experiment_agent_frames.items():
+    for (experiment_param, all_agent_frames,) in all_experiment_agent_frames.items():
         for agent, frames in all_agent_frames.items():
             if len(frames) > 0:
                 plot_multiple_frames(
                     frames,
                     agent,
-                    "hyperexperiment_enn_plot_"
-                    + experiment_param
-                    + "_"
-                    + agent,
+                    "hyperexperiment_enn_plot_" + experiment_param + "_" + agent,
                 )
 
 

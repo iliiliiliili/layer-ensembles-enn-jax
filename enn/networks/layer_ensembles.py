@@ -168,7 +168,9 @@ class LayerEnsembleBranch(hk.Module):
         else:
             self._b_init = jnp.zeros
 
-    def __call__(self, inputs: jnp.ndarray, index: int = None) -> jnp.ndarray:  # [B, H] -> [B, D, K]
+    def __call__(
+        self, inputs: jnp.ndarray, index: int = None
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K]
         assert inputs.ndim == 2
         unused_batch, input_size = inputs.shape
         w_init = hk.initializers.TruncatedNormal(stddev=(1.0 / jnp.sqrt(input_size)))
@@ -181,7 +183,8 @@ class LayerEnsembleBranch(hk.Module):
         branched = jnp.einsum("bi,ijk->bjk", inputs, w) + b
 
         return branched
-        # unbranched = 
+        # unbranched =
+
 
 class LayerEnsembleLinear(hk.Module):
     """Branches a single linear layer to num_ensemble, output_size and indexes it back"""
@@ -191,7 +194,7 @@ class LayerEnsembleLinear(hk.Module):
         num_ensemble: int,
         output_size: int,
         b_init: Optional[hk.initializers.Initializer] = None,
-        name: str = "layer_ensemble_branch",
+        name: str = "layer_ensemble_linear",
     ):
         super().__init__(name=name)
         self.num_ensemble = num_ensemble
@@ -201,7 +204,9 @@ class LayerEnsembleLinear(hk.Module):
         else:
             self._b_init = jnp.zeros
 
-    def __call__(self, inputs: jnp.ndarray, index: int = None) -> jnp.ndarray:  # [B, H, K] -> [B, D, K]
+    def __call__(
+        self, inputs: jnp.ndarray, index: int = None
+    ) -> jnp.ndarray:  # [B, H, K] -> [B, D, K]
         assert inputs.ndim == 3
         unused_batch, input_size, self.num_ensemble = inputs.shape
         w_init = hk.initializers.TruncatedNormal(stddev=(1.0 / jnp.sqrt(input_size)))
@@ -214,7 +219,8 @@ class LayerEnsembleLinear(hk.Module):
         unbranched = jnp.einsum("bik,ijk->bjk", inputs, w) + b
 
         return unbranched
-        # unbranched = 
+        # unbranched =
+
 
 class LayerEnsembleMLP(hk.Module):
     """Parallel num_ensemble MLPs all with same output_sizes.
@@ -233,7 +239,9 @@ class LayerEnsembleMLP(hk.Module):
         super().__init__(name=name)
         self.num_ensembles = num_ensembles
         layers = []
-        for index, (num_ensemble, output_size) in enumerate(zip(num_ensembles, output_sizes)):
+        for index, (num_ensemble, output_size) in enumerate(
+            zip(num_ensembles, output_sizes)
+        ):
             if index == 0:
                 if nonzero_bias:
                     b_init = hk.initializers.TruncatedNormal(stddev=1)
@@ -253,8 +261,11 @@ class LayerEnsembleMLP(hk.Module):
                 out = jax.nn.relu(out)
         return out
 
+
 def make_einsum_layer_ensemble_mlp_enn(
-    output_sizes: Sequence[int], num_ensembles: Sequence[int], nonzero_bias: bool = True,
+    output_sizes: Sequence[int],
+    num_ensembles: Sequence[int],
+    nonzero_bias: bool = True,
 ) -> base.EpistemicNetwork:
     """Factory method to create fast einsum MLP ensemble ENN.
 
@@ -288,6 +299,7 @@ def make_einsum_layer_ensemble_mlp_enn(
     indexer = indexers.EnsembleIndexer(num_ensembles[0])
 
     return base.EpistemicNetwork(apply, init, indexer)
+
 
 def make_einsum_layer_ensemble_mlp_with_prior_enn(
     output_sizes: Sequence[int],
@@ -344,7 +356,9 @@ class TrueLayerEnsembleBranch(hk.Module):
         else:
             self._b_init = jnp.zeros
 
-    def __call__(self, inputs: jnp.ndarray, index: int = None) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
+    def __call__(
+        self, inputs: jnp.ndarray, index: int = None
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
         assert inputs.ndim == 2
         unused_batch, input_size = inputs.shape
         w_init = hk.initializers.TruncatedNormal(stddev=(1.0 / jnp.sqrt(input_size)))
@@ -355,16 +369,12 @@ class TrueLayerEnsembleBranch(hk.Module):
             "b", [self.output_size, self.num_ensemble], init=self._b_init
         )
         branched = jnp.einsum("bi,ijk->bjk", inputs, w) + b
-        unbranched = jnp.dot(branched, one_hot_index)
         one_hot_index = jax.nn.one_hot(index, self.num_ensemble)
+        unbranched = jnp.dot(branched, one_hot_index)
         return unbranched
 
-class TrueLayerEnsembleMLP(hk.Module):
-    """Parallel num_ensemble MLPs all with same output_sizes.
 
-  In the first layer, the input is 'branched' to num_ensemble linear layers.
-  Then, in subsequent layers it is purely parallel EnsembleLinear.
-  """
+class TrueLayerEnsembleMLP(hk.Module):
 
     def __init__(
         self,
@@ -376,28 +386,36 @@ class TrueLayerEnsembleMLP(hk.Module):
         super().__init__(name=name)
         self.num_ensembles = num_ensembles
         layers = []
-        for index, (num_ensemble, output_size) in enumerate(zip(num_ensembles, output_sizes)):
+        for index, (num_ensemble, output_size) in enumerate(
+            zip(num_ensembles, output_sizes)
+        ):
             if index == 0:
                 if nonzero_bias:
                     b_init = hk.initializers.TruncatedNormal(stddev=1)
                 else:
                     b_init = jnp.zeros
-                layers.append(LayerEnsembleBranch(num_ensemble, output_size, b_init))
+                layers.append(TrueLayerEnsembleBranch(num_ensemble, output_size, b_init))
             else:
-                layers.append(LayerEnsembleLinear(num_ensemble, output_size, jnp.zeros))
+                layers.append(TrueLayerEnsembleBranch(num_ensemble, output_size, jnp.zeros))
         self.layers = tuple(layers)
 
-    def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:  # [B, H] -> [B, D, K]
+    def __call__(
+        self, inputs: jnp.ndarray, index: Sequence[int]
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
         num_layers = len(self.layers)
         out = hk.Flatten()(inputs)
-        for i, layer in enumerate(self.layers):
-            out = layer(out)
+        for i, (layer, layer_index) in enumerate(zip(self.layers, index)):
+            out = layer(out, layer_index)
             if i < num_layers - 1:
                 out = jax.nn.relu(out)
         return out
 
+
 def make_true_einsum_layer_ensemble_mlp_enn(
-    output_sizes: Sequence[int], num_ensembles: Sequence[int], nonzero_bias: bool = True,
+    output_sizes: Sequence[int],
+    num_ensembles: Sequence[int],
+    nonzero_bias: bool = True,
+    correlated: bool = False,
 ) -> base.EpistemicNetwork:
     """Factory method to create fast einsum MLP ensemble ENN.
 
@@ -411,10 +429,10 @@ def make_true_einsum_layer_ensemble_mlp_enn(
     EpistemicNetwork as an ensemble of MLP.
   """
 
-    def ensemble_forward(x: base.Array) -> base.OutputWithPrior:
+    def ensemble_forward(x: base.Array, index: Sequence[int]) -> base.OutputWithPrior:
         """Forwards the entire ensemble at given input x."""
         model = TrueLayerEnsembleMLP(output_sizes, num_ensembles, nonzero_bias)
-        return model(x)
+        return model(x, index)
 
     transformed = hk.without_apply_rng(hk.transform(ensemble_forward))
 
@@ -424,10 +442,10 @@ def make_true_einsum_layer_ensemble_mlp_enn(
         return net_out
 
     def init(key: base.RngKey, x: base.Array, z: base.Index) -> hk.Params:
-        del z
-        return transformed.init(key, x)
+        # del z
+        return transformed.init(key, x, z)
 
-    indexer = indexers.EnsembleIndexer(num_ensembles[0])
+    indexer = indexers.LayerEnsembleIndexer(num_ensembles, correlated)
 
     return base.EpistemicNetwork(apply, init, indexer)
 
@@ -435,10 +453,12 @@ def make_true_einsum_layer_ensemble_mlp_enn(
 def make_true_einsum_layer_ensemble_mlp_with_prior_enn(
     output_sizes: Sequence[int],
     dummy_input: chex.Array,
+    dummy_index: chex.Array,
     num_ensembles: Sequence[int],
     prior_scale: float = 1.0,
     nonzero_bias: bool = True,
-    seed: int = 999,
+    seed: int = 2605,
+    correlated: bool = False,
 ) -> base.EpistemicNetwork:
     """Factory method to create fast einsum MLP ensemble with matched prior.
 
@@ -454,9 +474,11 @@ def make_true_einsum_layer_ensemble_mlp_with_prior_enn(
     EpistemicNetwork ENN of the ensemble of MLP with matches prior.
   """
 
-    enn = make_true_einsum_layer_ensemble_mlp_enn(output_sizes, num_ensembles, nonzero_bias)
+    enn = make_true_einsum_layer_ensemble_mlp_enn(
+        output_sizes, num_ensembles, nonzero_bias, correlated
+    )
     init_key, _ = jax.random.split(jax.random.PRNGKey(seed))
-    prior_params = enn.init(init_key, dummy_input, jnp.array([]))
+    prior_params = enn.init(init_key, dummy_input, dummy_index)
 
     # Apply function selects the appropriate index of the ensemble output.
     def apply_with_prior(

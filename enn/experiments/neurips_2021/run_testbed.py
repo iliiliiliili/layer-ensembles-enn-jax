@@ -60,6 +60,8 @@ flags.DEFINE_enum(
         "layer_ensemble",
         "layer_ensemble_cor",
         "layer_ensemble_einsum_cor",
+        "true_layer_ensemble_einsum",
+        "true_layer_ensemble_einsum_cor",
     ],
     "Which agent family.",
 )
