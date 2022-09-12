@@ -19,6 +19,7 @@ from plotnine.data import economics
 from pandas import Categorical, DataFrame
 from plotnine.scales.limits import ylim
 from plotnine.scales.scale_xy import scale_x_discrete
+from plotnine.guides import guide_axis, guide_legend, guide
 from glob import glob
 import re
 
@@ -88,6 +89,7 @@ field_tex_names = {
     "num_index_samples": "Samples",
     "initializer": "Init",
     "loss_function": "L_{f}",
+    "sample_type": "Samples",
 }
 
 
@@ -177,7 +179,7 @@ agent_plot_params = {
     "true_layer_ensemble_einsum_cor": {
         "x": "num_ensembles",
         "y": "kl",
-        "facet": ["noise_scale", "prior_scale"],
+        "facet": ["noise_scale", "prior_scale", "sample_type"],
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
@@ -185,43 +187,70 @@ agent_plot_params = {
 
 
 summary_select_agent_params = {
-    "ensemble": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensemble": [30],
-    },
-    "dropout": {
-        "dropout_rate": [0.05],
-        "regularization_scale": [1e-6],
-        "num_layers": [2],
-        "hidden_size": [50],
-    },
-    "hypermodel": {
-        "index_dim": [20],
-        "noise_scale": [1.0],
-        "prior_scale": [5.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-    },
-    "bbb": {
-        "sigma_0": [1e2],
-        "learning_rate": [1e-3],
-        "num_layers": [2],
-        "hidden_size": [50],
-    },
-    "vnn": {
-        "activation": ["relu", "tanh"],
-        # "activation_mode": ["mean"],
-        # "global_std_mode": ["multiply"],
-        "activation_mode": ["none"],
-        "global_std_mode": ["multiply"],
-        "num_layers": [3],
-        "hidden_size": [100],
-        "num_index_samples": [100],
-        "num_batches": ["1000"],
-    },
+    "ensemble": [
+        {
+            "agent_suffix": "_3",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensemble": [3],
+        },
+        {
+            "agent_suffix": "_10",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensemble": [10],
+        },
+        {
+            "agent_suffix": "_30",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensemble": [30],
+        },
+    ],
+    "dropout": [
+        {
+            "dropout_rate": [0.05],
+            "regularization_scale": [1e-6],
+            "num_layers": [2],
+            "hidden_size": [50],
+        },
+    ],
+    "hypermodel": [
+        {
+            "index_dim": [20],
+            "noise_scale": [1.0],
+            "prior_scale": [5.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+        },
+    ],
+    "bbb": [
+        {
+            "sigma_0": [1e2],
+            "learning_rate": [1e-3],
+            "num_layers": [2],
+            "hidden_size": [50],
+        },
+    ],
+    "vnn": [
+        {
+            "activation": ["relu", "tanh"],
+            # "activation_mode": ["mean"],
+            # "global_std_mode": ["multiply"],
+            "activation_mode": ["none"],
+            "global_std_mode": ["multiply"],
+            "num_layers": [3],
+            "hidden_size": [100],
+            "num_index_samples": [100],
+            "num_batches": ["1000"],
+        },
+    ],
     # "vnn_lrelu": {
     #     "activation_mode": ["mean"],
     #     "global_std_mode": ["multiply"],
@@ -240,41 +269,176 @@ summary_select_agent_params = {
     #     "initializer": ["glorot_normal+1"],
     #     "loss_function": ["gaussian"],
     # },
-    "layer_ensemble": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensembles": [5],
-    },
-    "layer_ensemble_cor": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensembles": [10],
-    },
-    "layer_ensemble_einsum_cor": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensembles": [10],
-    },
-    "true_layer_ensemble_einsum": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensembles": [5],
-    },
-    "true_layer_ensemble_einsum_cor": {
-        "noise_scale": [1.0],
-        "prior_scale": [1.0],
-        "num_layers": [2],
-        "hidden_size": [50],
-        "num_ensembles": [10],
-    },
+    "layer_ensemble": [
+        {
+            "agent_suffix": "_2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [2],
+        },
+        {
+            "agent_suffix": "_3",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+        },
+        {
+            "agent_suffix": "_5",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [5],
+        },
+    ],
+    "layer_ensemble_cor": [
+        {
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [10],
+        },
+    ],
+    "layer_ensemble_einsum_cor": [
+        {
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [10],
+        },
+    ],
+    "true_layer_ensemble_einsum": [
+        {
+            "agent_suffix": "_2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [2],
+        },
+        {
+            "agent_suffix": "_3",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+        },
+        {
+            "agent_suffix": "_4",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [4],
+        },
+        {
+            "agent_suffix": "_5",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [5],
+        },
+    ],
+    "true_layer_ensemble_einsum_cor": [
+        {
+            "agent_suffix": "_3s2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+            "sample_type": ["2"],
+        },
+        {
+            "agent_suffix": "_5s2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+            "sample_type": ["2"],
+        },
+        {
+            "agent_suffix": "_2sf",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [2],
+            "sample_type": ["full"],
+        },
+        {
+            "agent_suffix": "_3sf",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+            "sample_type": ["full"],
+        },
+        {
+            "agent_suffix": "_5sf",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [3],
+            "sample_type": ["full"],
+        },
+        {
+            "agent_suffix": "_8s4",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [8],
+            "sample_type": ["4"],
+        },
+        {
+            "agent_suffix": "_10s2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [10],
+            "sample_type": ["2"],
+        },
+        {
+            "agent_suffix": "_10s4",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [10],
+            "sample_type": ["4"],
+        },
+        {
+            "agent_suffix": "_30s2",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [30],
+            "sample_type": ["2"],
+        },
+        {
+            "agent_suffix": "_30s4",
+            "noise_scale": [1.0],
+            "prior_scale": [1.0],
+            "num_layers": [2],
+            "hidden_size": [50],
+            "num_ensembles": [30],
+            "sample_type": ["4"],
+        },
+    ],
 }
 
 summary_input_dims = [
@@ -663,40 +827,49 @@ def plot_summary(
         params = agent_plot_params[agent]
         filters = summary_select_agent_params[agent]
 
-        frames = all_frames
-        old_frames = None
 
-        for key, value in filters.items():
-            old_frames = frames
-            frames = [f[f[key].isin(value)] for f in frames]
-            if len(frames[0]) <= 0:
-                raise ValueError("Empty frame after filtering")
+        for filter in filters:
 
-        mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
-        std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
-            len(f) for f in frames
-        )
+            frames = all_frames
+            old_frames = None
+            agent_suffix = ""
 
-        data["agent"].append(agent)
-        data["mean"].append(mean)
-        data["std"].append(min(limit_std, std))
+            for key, value in filter.items():
+
+                if key == "agent_suffix":
+                    agent_suffix = value
+                    continue
+
+                old_frames = frames
+                frames = [f[f[key].isin(value)] for f in frames]
+                if len(frames[0]) <= 0:
+                    raise ValueError("Empty frame after filtering")
+
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
+                len(f) for f in frames
+            )
+
+            data["agent"].append((agent + agent_suffix).replace("_", "\n"))
+            data["mean"].append(mean)
+            data["std"].append(min(limit_std, std))
 
     frame = DataFrame(data)
-    frame["agent"] = Categorical(
-        frame["agent"],
-        [
-            "dropout",
-            "bbb",
-            "vnn",
-            "hypermodel",
-            "ensemble",
-            "layer_ensemble",
-            "layer_ensemble_cor",
-            "layer_ensemble_einsum_cor",
-            "true_layer_ensemble_einsum",
-            "true_layer_ensemble_einsum_cor",
-        ],
-    )
+    # frame["agent"] = Categorical(
+    #     frame["agent"],
+    #     [
+    #         "dropout",
+    #         "bbb",
+    #         "vnn",
+    #         "hypermodel",
+    #         "ensemble",
+    #         "layer_ensemble",
+    #         "layer_ensemble_cor",
+    #         "layer_ensemble_einsum_cor",
+    #         "true_layer_ensemble_einsum",
+    #         "true_layer_ensemble_einsum_cor",
+    #     ],
+    # )
 
     plot = (
         ggplot(frame)
@@ -711,6 +884,7 @@ def plot_summary(
         )
         + theme(axis_title=element_text(size=15), axis_text=element_text(size=4))
         + scale_color_discrete(guide=False)
+        # + scale_x_discrete(guide=guide_legend())
         + ylab("Mean KL")
         + xlab("Method")
     )
