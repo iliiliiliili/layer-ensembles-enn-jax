@@ -18,6 +18,7 @@
 
 from functools import reduce
 import jax
+from enn.networks import indexers
 from enn.networks.vnn import Activation
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
@@ -215,15 +216,14 @@ def make_true_layer_ensemble_einsum_ctor(
     prior_scale: float,
     hidden_size: int = 50,
     num_layers: int = 2,
-    sample_type: str = "full",
+    inference_samples: List[int] = ["full"],
     seed: int = 0,
 ) -> ConfigCtor:
     """Generate an ensemble agent config."""
 
     num_samples = reduce(lambda x, y: x * y, num_ensembles)
 
-    if sample_type != "full":
-        num_samples = int(sample_type) * num_ensembles[0]
+    inference_samples = [(int(x) * num_ensembles[0] if x != "full" else num_samples) for x in inference_samples]
 
     def make_enn(prior: testbed_base.PriorKnowledge) -> enn_base.EpistemicNetwork:
         output_sizes = list([hidden_size] * num_layers) + [prior.num_classes]
@@ -238,6 +238,7 @@ def make_true_layer_ensemble_einsum_ctor(
 
     def make_agent_config() -> agents.VanillaEnnConfig:
         """Factory method to create agent_config, swap this for different agents."""
+
         return agents.VanillaEnnConfig(
             enn_ctor=make_enn,
             loss_ctor=enn_losses.gaussian_regression_loss(
@@ -246,6 +247,7 @@ def make_true_layer_ensemble_einsum_ctor(
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
             seed=seed,
+            inference_samples=inference_samples
         )
 
     return make_agent_config
@@ -626,26 +628,14 @@ def make_true_layer_ensemble_einsum_cor_sweep() -> List[AgentCtorConfig]:
 
     # Adding reasonably interesting ensemble agents
     # for num_ensemble in [2, 3]:
-    for num_ensemble, sample_type in [
-        (2, 2),
-        (2, "full"),
-        (3, "full"),
-        (3, 2),
-        (3, 3),
-        (5, "full"),
-        (5, 2),
-        (5, 3),
-        (6, 2),
-        (6, 3),
-        (8, 2),
-        (8, 3),
-        (8, 4),
-        (10, 2),
-        (10, 3),
-        (10, 4),
-        (30, 2),
-        (30, 3),
-        (30, 4),
+    for num_ensemble, inference_samples in [
+        (2, [2, 3, "full"]),
+        (3, [2, 3, 4, "full"]),
+        (5, [2, 3, 5, "full"]),
+        (6, [2, 3, 5, 10, "full"]),
+        (8, [2, 3, 5, 10, "full"]),
+        (10, [2, 3, 5, 10, 20, "full"]),
+        (30, [2, 3, 5, 10, 20, 100, "full"]),
     ]:
         for noise_scale in [1]:
             for prior_scale in [1]:
@@ -657,7 +647,7 @@ def make_true_layer_ensemble_einsum_cor_sweep() -> List[AgentCtorConfig]:
                         settings = {
                             "agent": "true_layer_ensemble_einsum_cor",
                             "num_ensembles": num_ensembles,
-                            "sample_type": str(sample_type),
+                            "inference_samples": str(inference_samples),
                             "noise_scale": noise_scale,
                             "prior_scale": prior_scale,
                             "num_layers": num_layers,
@@ -669,7 +659,7 @@ def make_true_layer_ensemble_einsum_cor_sweep() -> List[AgentCtorConfig]:
                             prior_scale,
                             hidden_size,
                             num_layers,
-                            sample_type,
+                            inference_samples,
                         )
                         sweep.append(AgentCtorConfig(settings, config_ctor))
 

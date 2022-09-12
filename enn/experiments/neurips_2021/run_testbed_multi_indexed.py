@@ -113,7 +113,7 @@ def main(_):
 
                     agent_id = FLAGS.agent_id_start + i
 
-                    kls = []
+                    kls = {}
 
                     for seed in FLAGS.seed:
 
@@ -154,18 +154,24 @@ def main(_):
                         enn_sampler = agent(
                             problem.train_data, problem.prior_knowledge, problem.evaluate_quality_val, log_file_name
                         )
-                        kl_quality = problem.evaluate_quality(enn_sampler)
-                        # kl_quality = agent.best_kl
-                        print(
-                            f"kl_estimate={kl_quality.kl_estimate}"
-                            + " mean_error="
-                            + str(kl_quality.extra["mean_error"])
-                            + " "
-                            + "std_error="
-                            + str(kl_quality.extra["std_error"])
-                        )
-                        all_results.append(kl_quality)
-                        kls.append(kl_quality)
+
+                        for samples in agent.config.inference_samples:
+
+                            if samples not in kls:
+                                kls[samples] = []
+
+                            kl_quality = problem.evaluate_quality(enn_sampler, samples)
+                            # kl_quality = agent.best_kl
+                            print(
+                                f"kl_estimate={kl_quality.kl_estimate}"
+                                + " mean_error="
+                                + str(kl_quality.extra["mean_error"])
+                                + " "
+                                + "std_error="
+                                + str(kl_quality.extra["std_error"])
+                            )
+                            all_results.append(kl_quality)
+                            kls[samples].append(kl_quality)
 
                     with open(
                         "results/results_"
@@ -182,34 +188,39 @@ def main(_):
                         "a",
                     ) as f:
 
-                        kl_mean = sum([kl_quality.kl_estimate for kl_quality in kls]) / len(kls)
-                        kl_variance = sum([(kl_quality.kl_estimate - kl_mean) ** 2 for kl_quality in kls]) / len(kls)
+                        for id, local_kls in kls.items():
 
-                        f.write(
-                            str(agent_id)
-                            + " "
-                            + str(kl_mean)
-                            + " "
-                            + "kl_variance="
-                            + str(kl_variance)
-                            + " "
-                            + "mean_error="
-                            + str(sum([kl_quality.extra["mean_error"] for kl_quality in kls]) / len(kls))
-                            + " "
-                            + "std_error="
-                            + str(sum([kl_quality.extra["std_error"] for kl_quality in kls]) / len(kls))
-                            + " "
-                            + " ".join(
-                                [
-                                    str(k) + "=" + str(v)
-                                    for (
-                                        k,
-                                        v,
-                                    ) in agent_config.settings.items()
-                                ]
+                            kl_mean = sum([kl_quality.kl_estimate for kl_quality in local_kls]) / len(local_kls)
+                            kl_variance = sum([(kl_quality.kl_estimate - kl_mean) ** 2 for kl_quality in local_kls]) / len(local_kls)
+
+                            f.write(
+                                str(agent_id)
+                                + " "
+                                + str(kl_mean)
+                                + " "
+                                + "kl_variance="
+                                + str(kl_variance)
+                                + " "
+                                + "mean_error="
+                                + str(sum([kl_quality.extra["mean_error"] for kl_quality in local_kls]) / len(local_kls))
+                                + " "
+                                + "std_error="
+                                + str(sum([kl_quality.extra["std_error"] for kl_quality in local_kls]) / len(local_kls))
+                                + " "
+                                + "indexer="
+                                + str(id)
+                                + " "
+                                + " ".join(
+                                    [
+                                        str(k) + "=" + str(v)
+                                        for (
+                                            k,
+                                            v,
+                                        ) in agent_config.settings.items()
+                                    ]
+                                )
+                                + "\n"
                             )
-                            + "\n"
-                        )
 
                 print(all_results)
 

@@ -135,10 +135,13 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
         return self.prior
 
     def evaluate_quality(
-        self, enn_sampler: testbed_base.EpistemicSampler
+        self, enn_sampler: testbed_base.EpistemicSampler, num_samples = None
     ) -> testbed_base.ENNQuality:
         """Computes KL estimate on mean functions for tau=1 only."""
         # Extract useful quantities from the gp sampler.
+
+        num_samples = self.num_enn_samples if num_samples is None else num_samples
+
         x_test = self.data_sampler.x_test
         num_test = x_test.shape[0]
         posterior_mean = self.data_sampler.test_mean[:, 0]
@@ -147,9 +150,9 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
 
         # Compute the mean and std of ENN posterior
         batched_sampler = jax.jit(jax.vmap(enn_sampler, in_axes=[None, 0]))
-        enn_samples = batched_sampler(x_test, jnp.arange(self.num_enn_samples))
+        enn_samples = batched_sampler(x_test, jnp.arange(num_samples))
         enn_samples = enn_samples[:, :, 0]
-        chex.assert_shape(enn_samples, [self.num_enn_samples, num_test])
+        chex.assert_shape(enn_samples, [num_samples, num_test])
         enn_mean = jnp.mean(enn_samples, axis=0)
         enn_std = jnp.std(enn_samples, axis=0) + self.std_ridge
 

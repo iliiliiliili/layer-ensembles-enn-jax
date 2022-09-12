@@ -16,7 +16,7 @@
 # ============================================================================
 """A minimalist wrapper around ENN experiment for testbed submission."""
 
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from acme.utils import loggers
 import dataclasses
@@ -43,6 +43,8 @@ class VanillaEnnConfig:
     logger: Optional[loggers.Logger] = None
     train_log_freq: Optional[int] = None
     eval_log_freq: Optional[int] = None
+    indexers: Optional[Dict] = None
+    inference_samples: Optional[List] = None
 
 
 def extract_enn_sampler(
@@ -51,6 +53,17 @@ def extract_enn_sampler(
     def enn_sampler(x: enn_base.Array, seed: int = 0) -> enn_base.Array:
         """Generate a random sample from posterior distribution at x."""
         net_out = experiment.predict(x, seed)
+        return utils.parse_net_output(net_out)
+
+    return jax.jit(enn_sampler)
+
+
+def extract_multi_indexer_enn_sampler(
+    experiment: supervised.Experiment, indexer_id,
+) -> testbed_base.EpistemicSampler:
+    def enn_sampler(x: enn_base.Array, seed: int = 0) -> enn_base.Array:
+        """Generate a random sample from posterior distribution at x."""
+        net_out = experiment.predict(x, seed, indexer_id)
         return utils.parse_net_output(net_out)
 
     return jax.jit(enn_sampler)
@@ -122,6 +135,50 @@ class VanillaEnnAgent(testbed_base.TestbedAgent):
 
         loss = self.experiment.train(self.config.num_batches, None if evaluate is None else log_evaluate, log_file_name)
         return extract_enn_sampler(self.experiment)
+
+
+@dataclasses.dataclass
+class MultiIndexerEnnAgent(testbed_base.TestbedAgent):
+    """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
+
+    config: VanillaEnnConfig
+    eval_datasets: Optional[Dict[str, enn_base.BatchIterator]] = None
+    experiment: Optional[supervised.Experiment] = None
+
+    def __call__(
+        self, data: testbed_base.Data, prior: testbed_base.PriorKnowledge, evaluate: Callable = None, log_file_name: str = None,
+    ) -> testbed_base.EpistemicSampler:
+        """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
+        enn = self.config.enn_ctor(prior)
+        enn_data = enn_base.Batch(data.x, data.y)
+        self.experiment = supervised.MultiIndexerExperiment(
+            enn=enn,
+            indexers=self.config.indexers,
+            loss_fn=self.config.loss_ctor(prior, enn),
+            optimizer=self.config.optimizer,
+            dataset=utils.make_batch_iterator(
+                enn_data, self.config.batch_size, self.config.seed
+            ),
+            seed=self.config.seed,
+            logger=self.config.logger,
+            train_log_freq=logging_freq(
+                self.config.num_batches, log_freq=self.config.train_log_freq
+            ),
+            eval_datasets=self.eval_datasets,
+            eval_log_freq=200,
+        )
+
+        self.best_kl = None
+
+        loss = self.experiment.train(self.config.num_batches, None, log_file_name)
+
+        samplers = {}
+
+        for id in self.config.indexers.keys():
+            samplers[id] = extract_multi_indexer_enn_sampler(self.experiment, id)
+
+        return samplers
+
 
 
 def _round_to_integer(x: float) -> int:

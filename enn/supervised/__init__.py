@@ -25,7 +25,7 @@ from enn.supervised.multiloss_experiment import MultilossExperiment
 from enn.supervised.multiloss_experiment import MultilossTrainer
 
 # Experiments
-from enn.supervised.sgd_experiment import Experiment
+from enn.supervised.sgd_experiment import Experiment, MultiIndexerExperiment
 
 # Testing
 from enn.supervised.testing import make_test_experiment
