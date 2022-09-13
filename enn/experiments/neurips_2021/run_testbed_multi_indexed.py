@@ -63,6 +63,7 @@ flags.DEFINE_enum(
         "layer_ensemble_einsum_cor",
         "true_layer_ensemble_einsum",
         "true_layer_ensemble_einsum_cor",
+        "subsample_ensemble",
     ],
     "Which agent family.",
 )
@@ -76,6 +77,8 @@ def main(_):
 
     os.makedirs("results", exist_ok=True)
     os.makedirs("single_runs", exist_ok=True)
+
+    print("Multi Indexed Run")
 
     for k in ["input_dim", "data_ratio", "noise_std", "experiment_group"]:
         print("--" + str(k) + "=" + str(FLAGS.flag_values_dict()[k]))
