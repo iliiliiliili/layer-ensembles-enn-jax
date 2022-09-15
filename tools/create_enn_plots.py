@@ -6,6 +6,7 @@ from plotnine import (
     facet_grid,
     facet_wrap,
     scale_y_continuous,
+    scale_x_continuous,
     geom_hline,
     position_dodge,
     geom_errorbar,
@@ -61,10 +62,15 @@ int_list_fields = [
     "num_ensembles",
 ]
 
+rename = {
+    "num_ensembles": "num_ensemble"
+}
+
 field_tex_names = {
     "kl": "KL",
     "kl_variance": "Var[KL|seed]",
     "agent": "Type",
+    "agent_full": "TypeF",
     "mean": "Mean[KL]",
     "kl_std": "Var[KL]",
     "std": "Var[KL]",
@@ -87,6 +93,7 @@ field_tex_names = {
     "batch_norm_mode": "BNM",
     "global_std_mode": "GStdM",
     "num_batches": "Epochs",
+    "indexer": "Indexer",
     "num_index_samples": "Samples",
     "initializer": "Init",
     "loss_function": "L_{f}",
@@ -96,6 +103,13 @@ field_tex_names = {
 
 agent_plot_params = {
     "ensemble": {
+        "x": "num_ensemble",
+        "y": "kl",
+        "facet": ["noise_scale", "prior_scale"],
+        "colour": "factor(num_layers)",
+        "shape": "factor(hidden_size)",
+    },
+    "subsample_ensemble": {
         "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale"],
@@ -150,35 +164,35 @@ agent_plot_params = {
         "fill": "initializer",
     },
     "layer_ensemble": {
-        "x": "num_ensembles",
+        "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale"],
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
     "layer_ensemble_cor": {
-        "x": "num_ensembles",
+        "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale"],
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
     "layer_ensemble_einsum_cor": {
-        "x": "num_ensembles",
+        "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale"],
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
     "true_layer_ensemble_einsum": {
-        "x": "num_ensembles",
+        "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale"],
         "colour": "factor(num_layers)",
         "shape": "factor(hidden_size)",
     },
     "true_layer_ensemble_einsum_cor": {
-        "x": "num_ensembles",
+        "x": "num_ensemble",
         "y": "kl",
         "facet": ["noise_scale", "prior_scale", "sample_type"],
         "colour": "factor(num_layers)",
@@ -252,24 +266,6 @@ summary_select_agent_params = {
             "num_batches": ["1000"],
         },
     ],
-    # "vnn_lrelu": {
-    #     "activation_mode": ["mean"],
-    #     "global_std_mode": ["multiply"],
-    #     "num_layers": [2],
-    #     "hidden_size": [50],
-    #     "num_index_samples": [100],
-    #     "num_batches": ["1000"],
-    # },
-    # "vnn_init": {
-    #     "activation_mode": ["mean"],
-    #     "global_std_mode": ["none", "multiply"],
-    #     "num_layers": [2],
-    #     "hidden_size": [50],
-    #     "num_index_samples": [100],
-    #     "num_batches": ["1000"],
-    #     "initializer": ["glorot_normal+1"],
-    #     "loss_function": ["gaussian"],
-    # },
     "layer_ensemble": [
         {
             "agent_suffix": "_2",
@@ -277,7 +273,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [2],
+            "num_ensemble": [2],
         },
         {
             "agent_suffix": "_3",
@@ -285,7 +281,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [3],
+            "num_ensemble": [3],
         },
         {
             "agent_suffix": "_5",
@@ -293,7 +289,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [5],
+            "num_ensemble": [5],
         },
     ],
     "layer_ensemble_cor": [
@@ -302,7 +298,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [10],
+            "num_ensemble": [10],
         },
     ],
     "layer_ensemble_einsum_cor": [
@@ -311,7 +307,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [10],
+            "num_ensemble": [10],
         },
     ],
     "true_layer_ensemble_einsum": [
@@ -321,7 +317,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [2],
+            "num_ensemble": [2],
         },
         {
             "agent_suffix": "_3",
@@ -329,7 +325,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [3],
+            "num_ensemble": [3],
         },
         {
             "agent_suffix": "_4",
@@ -337,7 +333,7 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [4],
+            "num_ensemble": [4],
         },
         {
             "agent_suffix": "_5",
@@ -345,345 +341,60 @@ summary_select_agent_params = {
             "prior_scale": [1.0],
             "num_layers": [2],
             "hidden_size": [50],
-            "num_ensembles": [5],
+            "num_ensemble": [5],
         },
     ],
-    "true_layer_ensemble_einsum_cor": [
-        {
-            "agent_suffix": "_2s4",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [2],
-            "indexer": [4],
-        },
-        {
-            "agent_suffix": "_2s6",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [2],
-            "indexer": [6],
-        },
-        {
-            "agent_suffix": "_2s8f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [2],
-            "indexer": [8],
-        },
-        {
-            "agent_suffix": "_3s6",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [3],
-            "indexer": [6],
-        },
-        {
-            "agent_suffix": "_3s9",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [3],
-            "indexer": [9],
-        },
-        {
-            "agent_suffix": "_3s12",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [3],
-            "indexer": [12],
-        },
-        {
-            "agent_suffix": "_3s27f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [3],
-            "indexer": [12],
-        },
-        {
-            "agent_suffix": "_5s10",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [5],
-            "indexer": [10],
-        },
-        {
-            "agent_suffix": "_5s15",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [5],
-            "indexer": [15],
-        },
-        {
-            "agent_suffix": "_5s25",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [5],
-            "indexer": [25],
-        },
-        {
-            "agent_suffix": "_5s125f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [5],
-            "indexer": [125],
-        },
-        {
-            "agent_suffix": "_6s12",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [6],
-            "indexer": [12],
-        },
-        {
-            "agent_suffix": "_6s18",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [6],
-            "indexer": [18],
-        },
-        {
-            "agent_suffix": "_6s30",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [6],
-            "indexer": [30],
-        },
-        {
-            "agent_suffix": "_6s60",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [6],
-            "indexer": [60],
-        },
-        {
-            "agent_suffix": "_6s216f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [6],
-            "indexer": [216],
-        },
-        {
-            "agent_suffix": "_8s16",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [8],
-            "indexer": [16],
-        },
-        {
-            "agent_suffix": "_8s24",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [8],
-            "indexer": [24],
-        },
-        {
-            "agent_suffix": "_8s40",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [8],
-            "indexer": [40],
-        },
-        {
-            "agent_suffix": "_8s80",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [8],
-            "indexer": [80],
-        },
-        {
-            "agent_suffix": "_8s512f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [8],
-            "indexer": [512],
-        },
-        {
-            "agent_suffix": "_10s20",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [20],
-        },
-        {
-            "agent_suffix": "_10s30",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [30],
-        },
-        {
-            "agent_suffix": "_10s50",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [50],
-        },
-        {
-            "agent_suffix": "_10s100",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [100],
-        },
-        {
-            "agent_suffix": "_10s200",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [200],
-        },
-        {
-            "agent_suffix": "_10s1000f",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensembles": [10],
-            "indexer": [1000],
-        },
-        # {
-        #     "agent_suffix": "_3s2",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [3],
-        #     "sample_type": ["2"],
-        # },
-        # {
-        #     "agent_suffix": "_5s2",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [3],
-        #     "sample_type": ["2"],
-        # },
-        # {
-        #     "agent_suffix": "_2sf",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [2],
-        #     "sample_type": ["full"],
-        # },
-        # {
-        #     "agent_suffix": "_3sf",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [3],
-        #     "sample_type": ["full"],
-        # },
-        # {
-        #     "agent_suffix": "_5sf",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [3],
-        #     "sample_type": ["full"],
-        # },
-        # {
-        #     "agent_suffix": "_8s4",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [8],
-        #     "sample_type": ["4"],
-        # },
-        # {
-        #     "agent_suffix": "_10s2",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [10],
-        #     "sample_type": ["2"],
-        # },
-        # {
-        #     "agent_suffix": "_10s4",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [10],
-        #     "sample_type": ["4"],
-        # },
-        # {
-        #     "agent_suffix": "_30s2",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [30],
-        #     "sample_type": ["2"],
-        # },
-        # {
-        #     "agent_suffix": "_30s4",
-        #     "noise_scale": [1.0],
-        #     "prior_scale": [1.0],
-        #     "num_layers": [2],
-        #     "hidden_size": [50],
-        #     "num_ensembles": [30],
-        #     "sample_type": ["4"],
-        # },
-    ],
+    "true_layer_ensemble_einsum_cor": [],
+    "subsample_ensemble": [],
 }
+
+def add_true_layer_ensemble_einsum_cor_summary_params():
+    for num_ensemble, inference_samples in [
+        (2, [2, 3, "full"]),
+        (3, [2, 3, 4, "full"]),
+        (5, [2, 3, 5, "full"]),
+        (6, [2, 3, 5, 10, "full"]),
+        (8, [2, 3, 5, 10, "full"]),
+        (10, [2, 3, 5, 10, 20, "full"]),
+    ]:
+        for samples in inference_samples:
+            indexer = num_ensemble ** 3 if samples == "full" else samples * num_ensemble 
+            params = {
+                "agent_suffix": "_" + str(num_ensemble) + "s" + str(indexer) + ("f" if samples == "full" else ""),
+                "noise_scale": [1.0],
+                "prior_scale": [1.0],
+                "num_layers": [2],
+                "hidden_size": [50],
+                "num_ensemble": [num_ensemble],
+                "indexer": [indexer],
+            }
+            summary_select_agent_params["true_layer_ensemble_einsum_cor"].append(params)
+
+def add_subsample_ensemble_summary_params():
+    for num_ensemble, inference_samples in [
+        (2, [2, 100]),
+        (3, [2, 3, 100]),
+        (5, [2, 3, 5, 100]),
+        (6, [2, 3, 5, 6, 100]),
+        (8, [2, 3, 5, 8, 100]),
+        (10, [2, 3, 5, 10, 100]),
+        (30, [2, 3, 5, 10, 20, 30, 100]),
+    ]:
+        for samples in inference_samples:
+            indexer = samples 
+            params = {
+                "agent_suffix": "_" + str(num_ensemble) + "s" + str(indexer),
+                "noise_scale": [1.0],
+                "prior_scale": [1.0],
+                "num_layers": [2],
+                "hidden_size": [50],
+                "num_ensemble": [num_ensemble],
+                "indexer": [indexer],
+            }
+            summary_select_agent_params["subsample_ensemble"].append(params)
+
+add_true_layer_ensemble_einsum_cor_summary_params()
+add_subsample_ensemble_summary_params()
 
 summary_input_dims = [
     # [1],
@@ -746,6 +457,9 @@ def read_data(file):
                     v = int(v)
                 elif k in int_list_fields:
                     v = int(v.split("]")[0].split(" ")[-1])
+
+                if k in rename:
+                    k = rename[k]
 
                 # if k == "num_batches":
                 #     v //= 1000
@@ -1147,6 +861,131 @@ def plot_summary(
         "summary_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
     )
 
+def plot_ensemble_summary(
+    files,
+    allowed_input_dims,
+    parse_experiment_parameters=parse_enn_experiment_parameters,
+):
+
+    all_agent_frames = {}
+
+    for file in files:
+        agent_frames = read_data(file)
+        experiment_params = parse_experiment_parameters(file)
+
+        if experiment_params["input_dim"] not in allowed_input_dims:
+            print("scipping file", file, "due to input dim filter")
+            continue
+
+        for agent in agent_frames.keys():
+
+            # if agent in ["layer_ensemble"]:
+            #     continue
+
+            frame = agent_frames[agent]
+
+            if agent not in all_agent_frames:
+                all_agent_frames[agent] = []
+
+            all_agent_frames[agent].append(frame)
+
+    data = {
+        "agent_full": [],
+        "agent": [],
+        "mean": [],
+        "std": [],
+        "num_ensemble": [],
+        "indexer": [],
+    }
+
+    for agent, all_frames in all_agent_frames.items():
+
+        if agent not in summary_select_agent_params:
+            print(f"Skippng agent {agent} due to summary_select_agent_params filter")
+            continue
+
+        params = agent_plot_params[agent]
+        filters = summary_select_agent_params[agent]
+
+
+        for filter in filters:
+
+            frames = all_frames
+            old_frames = None
+            agent_suffix = ""
+
+            for key, value in filter.items():
+
+                if key == "agent_suffix":
+                    agent_suffix = value
+                    continue
+
+                old_frames = frames
+                frames = [f[f[key].isin(value)] for f in frames]
+                if len(frames[0]) <= 0:
+                    raise ValueError("Empty frame after filtering")
+
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
+                len(f) for f in frames
+            )
+
+            data["agent_full"].append((agent + agent_suffix).replace("_", "\n"))
+            data["agent"].append(agent)
+            data["mean"].append(mean)
+            data["std"].append(min(limit_std, std))
+            data["num_ensemble"].append(int(frames[0]["num_ensemble"]))
+            data["indexer"].append(int(frames[0]["indexer"]))
+
+    frame = DataFrame(data)
+    # frame["agent"] = Categorical(
+    #     frame["agent"],
+    #     [
+    #         "dropout",
+    #         "bbb",
+    #         "vnn",
+    #         "hypermodel",
+    #         "ensemble",
+    #         "layer_ensemble",
+    #         "layer_ensemble_cor",
+    #         "layer_ensemble_einsum_cor",
+    #         "true_layer_ensemble_einsum",
+    #         "true_layer_ensemble_einsum_cor",
+    #     ],
+    # )
+
+    plot = (
+        ggplot(frame)
+        + aes(x="indexer", y="mean")
+        + geom_hline(yintercept=1)
+        + facet_grid("num_ensemble ~ agent", space="free")
+        + scale_y_continuous(trans="log10")
+        + scale_x_continuous(trans="log10")
+        + geom_point(aes(colour="agent"), size=2, stroke=0.1)
+        + geom_errorbar(
+            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.3, size=1,
+        )
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=4), figure_size=(14, 18))
+        + scale_color_discrete(guide=False)
+        # + scale_x_discrete(guide=guide_legend())
+        + ylab("Mean KL")
+        + xlab("Method")
+    )
+    plot.save(
+        "plots/summary_ensemble_enn_plot_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".png",
+        dpi=600,
+    )
+    frame.to_csv(
+        "plots/summary_ensemble_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+    )
+    create_tex_table(
+        frame,
+        "all",
+        "summary_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+    )
+
 
 def plot_all_hyperexperiment_frames(
     files, parse_experiment_parameters=parse_enn_experiment_parameters
@@ -1193,6 +1032,6 @@ def plot_all_hyperexperiment_frames(
 # plot_summary_vnn(files, [10, 100, 1000])
 
 for ids in summary_input_dims:
-    plot_summary(files, ids)
+    plot_ensemble_summary(files, ids)
 # plot_all_hyperexperiment_frames(files)
 # plot_all_single_frames(files)

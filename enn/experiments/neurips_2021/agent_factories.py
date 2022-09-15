@@ -536,13 +536,13 @@ def make_subsample_ensemble_sweep() -> List[AgentCtorConfig]:
 
     # Adding reasonably interesting ensemble agents
     for num_ensemble, inference_samples in [
-        (2, [2]),
-        (3, [2, 3]),
-        (5, [2, 3, 5]),
-        (6, [2, 3, 5, 6]),
-        (8, [2, 3, 5, 8]),
-        (10, [2, 3, 5, 10]),
-        (30, [2, 3, 5, 10, 20, 30]),
+        (2, [2, 100]),
+        (3, [2, 3, 100]),
+        (5, [2, 3, 5, 100]),
+        (6, [2, 3, 5, 6, 100]),
+        (8, [2, 3, 5, 8, 100]),
+        (10, [2, 3, 5, 10, 100]),
+        (30, [2, 3, 5, 10, 20, 30, 100]),
     ]:
         for noise_scale in [1]:
             for prior_scale in [1]:
@@ -1106,6 +1106,8 @@ def make_agent_sweep(agent: str = "all") -> Sequence[AgentCtorConfig]:
         agent_sweep = make_true_layer_ensemble_einsum_sweep()
     elif agent == "true_layer_ensemble_einsum_cor":
         agent_sweep = make_true_layer_ensemble_einsum_cor_sweep()
+    elif agent == "subsample_ensemble":
+        agent_sweep = make_subsample_ensemble_sweep()
     else:
         raise ValueError(f"agent={agent} is not valid!")
 
