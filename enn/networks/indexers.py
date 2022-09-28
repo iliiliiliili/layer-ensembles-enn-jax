@@ -39,6 +39,21 @@ class EnsembleIndexer(base.EpistemicIndexer):
     def __call__(self, key: base.RngKey) -> base.Index:
         return jax.random.randint(key, [], 0, self.num_ensemble)
 
+    def batched(self, key: base.RngKey, num_samples: int) -> base.Index:
+
+        def create_all_samples(num_ensemble):
+            result = []
+            for q in range(num_ensemble):
+                result.append(q)
+
+            return result
+
+        all_samples = create_all_samples(self.num_ensemble)
+
+        results = jax.random.choice(key, jnp.array(all_samples), [num_samples], replace=num_samples > self.num_ensemble)
+
+        return results
+
 @dataclasses.dataclass
 class LayerEnsembleIndexer(base.EpistemicIndexer):
     """Index into an ensemble by integer."""
@@ -59,6 +74,29 @@ class LayerEnsembleIndexer(base.EpistemicIndexer):
         return jnp.array(
             [jax.random.randint(key, [], 0, num_ensemble) for key, num_ensemble in zip(keys, self.num_ensembles)]
         )
+
+    def batched(self, key: base.RngKey, num_samples: int) -> base.Index:
+
+        if self.correlated:
+            raise NotImplementedError()
+
+        def create_all_samples(i, num_ensembles, prefix):
+            result = []
+            for q in range(num_ensembles[i]):
+                value = (*prefix, q)
+
+                if i + 1 < len(num_ensembles):
+                    result += create_all_samples(i + 1, num_ensembles, value)
+                else:
+                    result.append(value)
+
+            return result
+
+        all_samples = create_all_samples(0, self.num_ensembles, [])
+
+        results = jax.random.choice(key, jnp.array(all_samples), [num_samples], replace=False)
+
+        return results
 
 
 @dataclasses.dataclass

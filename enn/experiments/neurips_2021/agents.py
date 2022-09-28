@@ -69,6 +69,17 @@ def extract_multi_indexer_enn_sampler(
     return jax.jit(enn_sampler)
 
 
+def extract_batched_enn_sampler(
+    experiment: supervised.BatchedExperiment,
+) -> testbed_base.EpistemicSampler:
+    def enn_sampler(x: enn_base.Array, num_samples: int, seed: int = 0) -> enn_base.Array:
+        """Generate a random sample from posterior distribution at x."""
+        net_out = experiment.predict(x, seed, num_samples)
+        return utils.parse_net_output(net_out)
+
+    return jax.jit(enn_sampler, static_argnums=(1, ))
+
+
 @dataclasses.dataclass
 class VanillaEnnAgent(testbed_base.TestbedAgent):
     """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
@@ -179,6 +190,44 @@ class MultiIndexerEnnAgent(testbed_base.TestbedAgent):
 
         return samplers
 
+
+@dataclasses.dataclass
+class BatchedEnnAgent(testbed_base.TestbedAgent):
+    """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
+
+    config: VanillaEnnConfig
+    eval_datasets: Optional[Dict[str, enn_base.BatchIterator]] = None
+    experiment: Optional[supervised.Experiment] = None
+
+    def __call__(
+        self, data: testbed_base.Data, prior: testbed_base.PriorKnowledge, evaluate: Callable = None, log_file_name: str = None,
+    ) -> testbed_base.EpistemicSampler:
+        """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
+        enn = self.config.enn_ctor(prior)
+        enn_data = enn_base.Batch(data.x, data.y)
+        self.experiment = supervised.BatchedExperiment(
+            enn=enn,
+            loss_fn=self.config.loss_ctor(prior, enn),
+            optimizer=self.config.optimizer,
+            dataset=utils.make_batch_iterator(
+                enn_data, self.config.batch_size, self.config.seed
+            ),
+            seed=self.config.seed,
+            logger=self.config.logger,
+            train_log_freq=logging_freq(
+                self.config.num_batches, log_freq=self.config.train_log_freq
+            ),
+            eval_datasets=self.eval_datasets,
+            eval_log_freq=200,
+        )
+
+        self.best_kl = None
+
+        loss = self.experiment.train(self.config.num_batches, None, log_file_name)
+
+        batched_sampler = extract_batched_enn_sampler(self.experiment)
+
+        return batched_sampler
 
 
 def _round_to_integer(x: float) -> int:

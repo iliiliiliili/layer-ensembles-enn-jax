@@ -213,6 +213,46 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
 
         return result
 
+    def evaluate_quality_batched(
+        self, batched_sampler: testbed_base.EpistemicSampler, num_samples = None
+    ) -> testbed_base.ENNQuality:
+        """Computes KL estimate on mean functions for tau=1 only."""
+        # Extract useful quantities from the gp sampler.
+
+        num_samples = self.num_enn_samples if num_samples is None else num_samples
+
+        x_test = self.data_sampler.x_test
+        num_test = x_test.shape[0]
+        posterior_mean = self.data_sampler.test_mean[:, 0]
+        posterior_std = jnp.sqrt(jnp.diag(self.data_sampler.test_cov))
+        posterior_std += self.std_ridge
+
+        # Compute the mean and std of ENN posterior
+        enn_samples = batched_sampler(x_test, num_samples)
+        enn_samples = enn_samples[:, :, 0]
+        chex.assert_shape(enn_samples, [num_samples, num_test])
+        enn_mean = jnp.mean(enn_samples, axis=0)
+        enn_std = jnp.std(enn_samples, axis=0) + self.std_ridge
+
+        # Compute the KL divergence between this and reference posterior
+        batched_kl = jax.jit(jax.vmap(_kl_gaussian))
+        kl_estimates = batched_kl(posterior_mean, posterior_std, enn_mean, enn_std)
+        chex.assert_shape(kl_estimates, [num_test])
+        kl_estimate = jnp.mean(kl_estimates)
+
+        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean)/posterior_mean))
+        error_std = jnp.mean(jnp.abs((posterior_std - enn_std)/posterior_std))
+
+        result = testbed_base.ENNQuality(
+            kl_estimate,
+            {
+                "mean_error": error_mean,
+                "std_error": error_std,
+            }
+        )
+
+        return result
+
 
 def _kl_gaussian(mean_1: float, std_1: float, mean_2: float, std_2: float) -> float:
     """Computes the KL(P_1 || P_2) for P_1,P_2 univariate Gaussian."""

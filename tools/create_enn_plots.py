@@ -958,14 +958,14 @@ def plot_ensemble_summary(
         ggplot(frame)
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
-        + facet_grid("num_ensemble ~ agent", space="free")
+        + facet_grid("num_ensemble ~ agent", space="free", scales="free_y")
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
         + geom_point(aes(colour="agent"), size=2, stroke=0.1)
         + geom_errorbar(
-            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.3, size=1,
+            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.2, size=0.7,
         )
-        + theme(axis_title=element_text(size=15), axis_text=element_text(size=4), figure_size=(14, 18))
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=4), figure_size=(10, 10))
         + scale_color_discrete(guide=False)
         # + scale_x_discrete(guide=guide_legend())
         + ylab("Mean KL")
