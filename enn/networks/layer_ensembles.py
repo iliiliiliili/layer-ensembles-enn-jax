@@ -489,3 +489,132 @@ def make_true_einsum_layer_ensemble_mlp_with_prior_enn(
         return base.OutputWithPrior(train=ensemble_train, prior=ensemble_prior)
 
     return base.EpistemicNetwork(apply_with_prior, enn.init, enn.indexer)
+
+
+class LayerEnsembleCorBranch(hk.Module):
+    """Branches a single linear layer to num_ensemble, output_size and indexes it back"""
+
+    def __init__(
+        self,
+        num_ensemble: int,
+        output_size: int,
+        b_init: Optional[hk.initializers.Initializer] = None,
+        name: str = "layer_ensemble_branch",
+    ):
+        super().__init__(name=name)
+        self.num_ensemble = num_ensemble
+        self.output_size = output_size
+        if b_init:
+            self._b_init = b_init
+        else:
+            self._b_init = jnp.zeros
+
+    def __call__(
+        self, inputs: jnp.ndarray, index: int = None
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
+        assert inputs.ndim == 2
+        unused_batch, input_size = inputs.shape
+        w_init = hk.initializers.TruncatedNormal(stddev=(1.0 / jnp.sqrt(input_size)))
+        w = hk.get_parameter(
+            "w", [input_size, self.output_size, self.num_ensemble], init=w_init
+        )
+        b = hk.get_parameter(
+            "b", [self.output_size, self.num_ensemble], init=self._b_init
+        )
+        branched = jnp.einsum("bi,ijk->bjk", inputs, w) + b
+        one_hot_index = jax.nn.one_hot(index, self.num_ensemble)
+        unbranched = jnp.dot(branched, one_hot_index)
+        return unbranched
+
+
+class LayerEnsembleCorMLP(hk.Module):
+
+    def __init__(
+        self,
+        output_sizes: Sequence[int],
+        num_ensembles: Sequence[int],
+        nonzero_bias: bool = True,
+        name: str = "layer_ensemble_mlp",
+    ):
+        super().__init__(name=name)
+        self.num_ensembles = num_ensembles
+        layers = []
+        for index, (num_ensemble, output_size) in enumerate(
+            zip(num_ensembles, output_sizes)
+        ):
+            if index == 0:
+                if nonzero_bias:
+                    b_init = hk.initializers.TruncatedNormal(stddev=1)
+                else:
+                    b_init = jnp.zeros
+                layers.append(LayerEnsembleCorBranch(num_ensemble, output_size, b_init))
+            else:
+                layers.append(LayerEnsembleCorBranch(num_ensemble, output_size, jnp.zeros))
+        self.layers = tuple(layers)
+
+    def __call__(
+        self, inputs: jnp.ndarray, index: Sequence[int]
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
+        num_layers = len(self.layers)
+        out = hk.Flatten()(inputs)
+        for i, (layer, layer_index) in enumerate(zip(self.layers, index)):
+            out = layer(out, layer_index)
+            if i < num_layers - 1:
+                out = jax.nn.relu(out)
+        return out
+
+
+def make_layer_ensemble_cor_mlp_enn(
+    output_sizes: Sequence[int],
+    num_ensembles: Sequence[int],
+    nonzero_bias: bool = True,
+    correlated: bool = False,
+) -> base.EpistemicNetwork:
+
+    def ensemble_forward(x: base.Array, index: Sequence[int]) -> base.OutputWithPrior:
+        """Forwards the entire ensemble at given input x."""
+        model = LayerEnsembleCorMLP(output_sizes, num_ensembles, nonzero_bias)
+        return model(x, index)
+
+    transformed = hk.without_apply_rng(hk.transform(ensemble_forward))
+
+    # Apply function selects the appropriate index of the ensemble output.
+    def apply(params: hk.Params, x: base.Array, z: base.Index) -> base.OutputWithPrior:
+        net_out = transformed.apply(params, x, z)
+        return net_out
+
+    def init(key: base.RngKey, x: base.Array, z: base.Index) -> hk.Params:
+        # del z
+        return transformed.init(key, x, z)
+
+    indexer = indexers.LayerEnsembleIndexer(num_ensembles, correlated)
+
+    return base.EpistemicNetwork(apply, init, indexer)
+
+
+def make_layer_ensemble_cor_mlp_with_prior_enn(
+    output_sizes: Sequence[int],
+    dummy_input: chex.Array,
+    dummy_index: chex.Array,
+    num_ensembles: Sequence[int],
+    prior_scale: float = 1.0,
+    nonzero_bias: bool = True,
+    seed: int = 2605,
+    correlated: bool = False,
+) -> base.EpistemicNetwork:
+
+    enn = make_layer_ensemble_cor_mlp_enn(
+        output_sizes, num_ensembles, nonzero_bias, correlated
+    )
+    init_key, _ = jax.random.split(jax.random.PRNGKey(seed))
+    prior_params = enn.init(init_key, dummy_input, dummy_index)
+
+    # Apply function selects the appropriate index of the ensemble output.
+    def apply_with_prior(
+        params: hk.Params, x: base.Array, z: base.Index
+    ) -> base.OutputWithPrior:
+        ensemble_train = enn.apply(params, x, z)
+        ensemble_prior = enn.apply(prior_params, x, z) * prior_scale
+        return base.OutputWithPrior(train=ensemble_train, prior=ensemble_prior)
+
+    return base.EpistemicNetwork(apply_with_prior, enn.init, enn.indexer)
