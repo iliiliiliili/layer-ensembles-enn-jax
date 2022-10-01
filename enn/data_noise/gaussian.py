@@ -102,16 +102,15 @@ def _make_layer_ensemble_gaussian_noise(noise_std: float, seed: int, factor=50) 
     batch_fold_in = jax.vmap(jax.random.fold_in)
     batch_normal = jax.vmap(jax.random.normal)
 
-    def noise_fn(data_index: base.DataIndex, index: base.Index) -> base.Array:
+    def noise_fn(data_index: base.DataIndex, input_index: base.Index) -> base.Array:
         """Assumes integer index for ensemble."""
         chex.assert_shape(data_index, (None, 1))
-        if len(index.shape) <= 1:  # If it's a single integer -> repeat for batch
 
-            total_index = 0
-            f = 1
-            for i in index:
-                total_index += i * f
-                f *= factor
+        total_index = 0
+        f = 1
+        for i in input_index[0, :]:
+            total_index += i * f
+            f *= factor
 
             index = jnp.repeat(total_index, len(data_index))
         data_keys = _make_key(data_index, seed)

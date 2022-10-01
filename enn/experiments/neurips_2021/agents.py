@@ -45,6 +45,8 @@ class VanillaEnnConfig:
     eval_log_freq: Optional[int] = None
     indexers: Optional[Dict] = None
     inference_samples: Optional[List] = None
+    train_num_samples: Optional[int] = None
+    batched_inference: Optional[bool] = False
 
 
 def extract_enn_sampler(
@@ -219,6 +221,8 @@ class BatchedEnnAgent(testbed_base.TestbedAgent):
             ),
             eval_datasets=self.eval_datasets,
             eval_log_freq=200,
+            batched_inference=self.config.batched_inference,
+            train_num_samples=self.config.train_num_samples,
         )
 
         self.best_kl = None

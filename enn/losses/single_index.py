@@ -73,6 +73,35 @@ def average_single_index_loss(
     return loss_fn
 
 
+def batched_average_single_index_loss(
+    single_loss: SingleIndexLossFn, num_index_samples: int = 1
+) -> base.LossFn:
+    """Average a single index loss over multiple index samples.
+
+  Args:
+    single_loss: loss function applied per epistemic index.
+    num_index_samples: number of index samples to average.
+
+  Returns:
+    LossFn that comprises the mean of both the loss and the metrics.
+  """
+
+    def loss_fn(
+        enn: base.EpistemicNetwork,
+        params: hk.Params,
+        batch: base.Batch,
+        key: base.RngKey,
+    ) -> base.Array:
+
+        def batched_indexer(key):
+            return enn.indexer.batched(key, num_index_samples)
+
+        batched_indexer = utils.make_batch_indexer(enn.indexer, num_index_samples)
+        loss, metrics = single_loss(enn.apply, params, batch, batched_indexer(key))
+        return jnp.mean(loss), jax.tree_map(jnp.mean, metrics)
+
+    return loss_fn
+
 def add_data_noise(
     single_loss: SingleIndexLossFn, noise_fn: data_noise.DataNoise
 ) -> SingleIndexLossFn:
@@ -88,8 +117,35 @@ def add_data_noise(
 
 
 @dataclasses.dataclass
-class L2Loss(SingleIndexLossFn):
+class BatchedL2Loss(SingleIndexLossFn):
     """L2 regression applied to a single epistemic index."""
+
+    def __call__(
+        self,
+        apply: base.ApplyFn,
+        params: hk.Params,
+        batch: base.Batch,
+        index: base.Index,
+    ) -> Tuple[base.Array, base.LossMetrics]:
+        """L2 regression applied to a single epistemic index."""
+        chex.assert_shape(batch.y, (None, 1))
+        chex.assert_shape(batch.data_index, (None, 1))
+        net_out = utils.parse_net_output(apply(params, batch.x, index))
+        chex.assert_shape(net_out, (None, *batch.y.shape))
+        sq_loss = jnp.square(utils.parse_net_output(net_out) - batch.y)
+        if batch.weights is None:
+            batch_weights = jnp.ones_like(batch.data_index)
+        else:
+            batch_weights = batch.weights
+        chex.assert_shape(sq_loss, (None, *batch_weights.shape))
+        result = jnp.mean(batch_weights * sq_loss)
+
+        return result, {}
+
+
+@dataclasses.dataclass
+class L2Loss(SingleIndexLossFn):
+    """L2 regression applied to a batched epistemic index."""
 
     def __call__(
         self,

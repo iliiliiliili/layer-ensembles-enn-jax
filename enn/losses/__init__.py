@@ -31,8 +31,10 @@ from enn.losses.prior_losses import RegressionPriorLoss
 from enn.losses.single_index import AccuracyErrorLoss
 from enn.losses.single_index import add_data_noise
 from enn.losses.single_index import average_single_index_loss
+from enn.losses.single_index import batched_average_single_index_loss
 from enn.losses.single_index import ElboLoss
 from enn.losses.single_index import L2Loss
+from enn.losses.single_index import BatchedL2Loss
 from enn.losses.single_index import SingleIndexLossFn
 from enn.losses.single_index import XentLoss
 

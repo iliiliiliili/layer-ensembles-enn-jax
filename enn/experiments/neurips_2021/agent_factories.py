@@ -157,12 +157,12 @@ def make_layer_ensemble_cor_ctor(
 
     def make_enn(prior: testbed_base.PriorKnowledge) -> enn_base.EpistemicNetwork:
         output_sizes = list([hidden_size] * num_layers) + [prior.num_classes]
-        return networks.make_true_einsum_layer_ensemble_mlp_with_prior_enn(
+        return networks.make_layer_ensemble_cor_mlp_with_prior_enn(
             output_sizes=output_sizes,
             num_ensembles=num_ensembles,
             prior_scale=prior_scale,
             dummy_input=jnp.ones([prior.num_train, prior.input_dim]),
-            dummy_index=jnp.zeros([len(num_ensembles)]),
+            dummy_index=jnp.zeros([1, len(num_ensembles)], dtype=jnp.int32),
             # correlated=True,
         )
 
@@ -171,13 +171,15 @@ def make_layer_ensemble_cor_ctor(
 
         return agents.VanillaEnnConfig(
             enn_ctor=make_enn,
-            loss_ctor=enn_losses.gaussian_regression_loss(
+            loss_ctor=enn_losses.batched_gaussian_regression_loss(
                 num_samples, noise_scale, l2_weight_decay=0
             ),
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
             seed=seed,
-            inference_samples=inference_samples
+            inference_samples=inference_samples,
+            train_num_samples=num_samples,
+            batched_inference=True,
         )
 
     return make_agent_config

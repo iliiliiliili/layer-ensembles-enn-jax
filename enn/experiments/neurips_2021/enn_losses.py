@@ -86,6 +86,33 @@ def gaussian_regression_loss(
     return loss_ctor
 
 
+def batched_gaussian_regression_loss(
+    num_index_samples: int,
+    noise_scale: float = 1,
+    l2_weight_decay: float = 0,
+    exclude_bias_l2: bool = True,
+) -> LossCtor:
+    """Add a matching Gaussian noise to the target y."""
+
+    def loss_ctor(
+        prior: testbed_base.PriorKnowledge, enn: enn_base.EpistemicNetwork
+    ) -> enn_base.LossFn:
+        """Add a matching Gaussian noise to the target y."""
+        noise_std = noise_scale * prior.noise_std
+        noise_fn = data_noise.GaussianTargetNoise(enn, noise_std)
+        single_loss = losses.add_data_noise(losses.BatchedL2Loss(), noise_fn)
+        loss_fn = losses.batched_average_single_index_loss(single_loss, num_index_samples)
+        if l2_weight_decay != 0:
+            if exclude_bias_l2:
+                predicate = lambda module, name, value: name != "b"
+            else:
+                predicate = lambda module, name, value: True
+            loss_fn = losses.add_l2_weight_decay(loss_fn, l2_weight_decay, predicate)
+        return loss_fn
+
+    return loss_ctor
+
+
 def regularized_dropout_loss(
     num_index_samples: int = 10,
     dropout_rate: float = 0.05,

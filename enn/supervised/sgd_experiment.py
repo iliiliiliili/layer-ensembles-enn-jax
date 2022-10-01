@@ -291,9 +291,11 @@ class BatchedExperiment(supervised_base.BaseExperiment):
         train_log_freq: int = 1,
         eval_datasets: Optional[Dict[str, base.BatchIterator]] = None,
         eval_log_freq: int = 1,
-        indexers: Dict = {}
+        batched_inference: bool = False,
+        train_num_samples: int = 1,
     ):
         self.enn = enn
+        self.batched_inference = batched_inference
         self.dataset = dataset
         self.rng = hk.PRNGSequence(seed)
 
@@ -312,7 +314,14 @@ class BatchedExperiment(supervised_base.BaseExperiment):
             result = batched_apply(params, inputs, index)
             return result
 
-        self._forward = jax.jit(forward, static_argnums=(3, ))
+        def batched_forward(
+            params: hk.Params, inputs: base.Array, key: base.RngKey, num_samples: int,
+        ) -> base.Array:
+            index = self.enn.indexer.batched(key, num_samples)
+            result = self.enn.apply(params, inputs, index)
+            return result
+
+        self._forward = jax.jit(batched_forward if self.batched_inference else forward, static_argnums=(3, ))
 
         # Define the SGD step on the loss
         def sgd_step(
@@ -332,7 +341,7 @@ class BatchedExperiment(supervised_base.BaseExperiment):
 
         # Initialize networks
         batch = next(self.dataset)
-        index = self.enn.indexer(next(self.rng))
+        index = self.enn.indexer.batched(next(self.rng), train_num_samples)
         params = self.enn.init(next(self.rng), batch.x, index)
         opt_state = optimizer.init(params)
         self.state = TrainingState(params, opt_state)

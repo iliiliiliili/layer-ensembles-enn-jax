@@ -17,6 +17,7 @@
 
 """Implementing some types of ENN ensembles in JAX."""
 from typing import Callable, Optional, Sequence
+from unittest import result
 
 from enn import base
 from enn import utils
@@ -510,7 +511,7 @@ class LayerEnsembleCorBranch(hk.Module):
             self._b_init = jnp.zeros
 
     def __call__(
-        self, inputs: jnp.ndarray, index: int = None
+        self, inputs: jnp.ndarray  # , index: int = None
     ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
         assert inputs.ndim == 2
         unused_batch, input_size = inputs.shape
@@ -522,9 +523,9 @@ class LayerEnsembleCorBranch(hk.Module):
             "b", [self.output_size, self.num_ensemble], init=self._b_init
         )
         branched = jnp.einsum("bi,ijk->bjk", inputs, w) + b
-        one_hot_index = jax.nn.one_hot(index, self.num_ensemble)
-        unbranched = jnp.dot(branched, one_hot_index)
-        return unbranched
+        # one_hot_index = jax.nn.one_hot(index, self.num_ensemble)
+        # unbranched = jnp.dot(branched, one_hot_index)
+        return branched
 
 
 class LayerEnsembleCorMLP(hk.Module):
@@ -553,15 +554,81 @@ class LayerEnsembleCorMLP(hk.Module):
         self.layers = tuple(layers)
 
     def __call__(
-        self, inputs: jnp.ndarray, index: Sequence[int]
+        self, inputs: jnp.ndarray, samples: Sequence[Sequence[int]]
+    ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
+        return self.batched(inputs, samples)
+
+    def dynamic_indexer(self, num_samples):
+
+        import numpy as np
+        def create_all_samples(i, num_ensembles, prefix):
+            result = []
+            for q in range(num_ensembles[i]):
+                value = (*prefix, q)
+
+                if i + 1 < len(num_ensembles):
+                    result += create_all_samples(i + 1, num_ensembles, value)
+                else:
+                    result.append(value)
+
+            return result
+
+        all_samples = np.array(create_all_samples(0, self.num_ensembles, []))
+
+        indices = np.random.choice(len(all_samples), num_samples, replace=False)
+        results = all_samples[indices]
+        lex_results = [results[:, results.shape[-1] - 1 - i] for i in range(results.shape[-1])]
+        sorted_results = results[np.lexsort(lex_results)]
+
+        return sorted_results
+
+    def batched(
+        self, inputs: jnp.ndarray, jnp_samples: Sequence[Sequence[int]]
     ) -> jnp.ndarray:  # [B, H] -> [B, D, K] -> [B, D]
         num_layers = len(self.layers)
-        out = hk.Flatten()(inputs)
-        for i, (layer, layer_index) in enumerate(zip(self.layers, index)):
-            out = layer(out, layer_index)
+        inp = hk.Flatten()(inputs)
+
+        samples = self.dynamic_indexer(len(jnp_samples))
+
+        def ole(i, x, sub_samples):
+            results = []
+
+            if i == num_layers:
+                return [x]
+
+            outs = self.layers[i](x)
+
             if i < num_layers - 1:
-                out = jax.nn.relu(out)
-        return out
+                outs = jax.nn.relu(outs)
+
+            layer_indices = [s[0] for s in sub_samples]
+            last_index = None
+            last_out = None
+            last_sub_samples = []
+
+            for q, index in enumerate(layer_indices):
+
+                last_sub_samples.append(sub_samples[q][1:])
+
+                if last_index is None:
+                    last_index = index
+                    last_out = outs[..., last_index]
+                elif index != last_index:
+                    last_index = index
+                    last_out = outs[..., last_index]
+
+                    results += ole(i + 1, last_out, last_sub_samples)
+                    last_sub_samples = []
+
+            if last_index is not None:
+                results += ole(i + 1, last_out, last_sub_samples)
+            
+            return results
+
+        outs = ole(0, inp, samples)
+        assert len(outs) == len(samples)
+        result = jnp.stack(outs, axis=0)
+        return result
 
 
 def make_layer_ensemble_cor_mlp_enn(
