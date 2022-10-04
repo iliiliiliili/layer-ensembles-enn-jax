@@ -605,11 +605,9 @@ class LayerEnsembleCorMLP(hk.Module):
             last_index = None
             last_out = None
             last_sub_samples = []
+            all_last_sub_samples = []
 
             for q, index in enumerate(layer_indices):
-
-                last_sub_samples.append(sub_samples[q][1:])
-
                 if last_index is None:
                     last_index = index
                     last_out = outs[..., last_index]
@@ -618,11 +616,16 @@ class LayerEnsembleCorMLP(hk.Module):
                     last_out = outs[..., last_index]
 
                     results += ole(i + 1, last_out, last_sub_samples)
+                    all_last_sub_samples.append(last_sub_samples)
                     last_sub_samples = []
+
+                last_sub_samples.append(sub_samples[q][1:])
 
             if last_index is not None:
                 results += ole(i + 1, last_out, last_sub_samples)
+                all_last_sub_samples.append(last_sub_samples)
             
+            assert len(results) == len(sub_samples)
             return results
 
         outs = ole(0, inp, samples)

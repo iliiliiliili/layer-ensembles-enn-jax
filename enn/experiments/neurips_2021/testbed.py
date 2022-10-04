@@ -135,7 +135,7 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
         return self.prior
 
     def evaluate_quality(
-        self, enn_sampler: testbed_base.EpistemicSampler, num_samples = None
+        self, enn_sampler: testbed_base.EpistemicSampler, num_samples=None
     ) -> testbed_base.ENNQuality:
         """Computes KL estimate on mean functions for tau=1 only."""
         # Extract useful quantities from the gp sampler.
@@ -162,59 +162,51 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
         chex.assert_shape(kl_estimates, [num_test])
         kl_estimate = jnp.mean(kl_estimates)
 
-        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean)/posterior_mean))
-        error_std = jnp.mean(jnp.abs((posterior_std - enn_std)/posterior_std))
+        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean) / posterior_mean))
+        error_std = jnp.mean(jnp.abs((posterior_std - enn_std) / posterior_std))
 
         result = testbed_base.ENNQuality(
-            kl_estimate,
-            {
-                "mean_error": error_mean,
-                "std_error": error_std,
-            }
+            kl_estimate, {"mean_error": error_mean, "std_error": error_std,}
         )
 
         return result
-    
+
     def evaluate_quality_val(
         self, enn_sampler: testbed_base.EpistemicSampler
     ) -> testbed_base.ENNQuality:
         """Computes KL estimate on mean functions for tau=1 only."""
         # Extract useful quantities from the gp sampler.
         x_val = self.data_sampler.x_val
-        num_test = x_val.shape[0]
-        posterior_mean = self.data_sampler.test_mean[:, 0]
-        posterior_std = jnp.sqrt(jnp.diag(self.data_sampler.test_cov))
+        num_val = x_val.shape[0]
+        posterior_mean = self.data_sampler.val_mean[:, 0]
+        posterior_std = jnp.sqrt(jnp.diag(self.data_sampler.val_cov))
         posterior_std += self.std_ridge
 
         # Compute the mean and std of ENN posterior
         batched_sampler = jax.jit(jax.vmap(enn_sampler, in_axes=[None, 0]))
         enn_samples = batched_sampler(x_val, jnp.arange(self.num_enn_samples))
         enn_samples = enn_samples[:, :, 0]
-        chex.assert_shape(enn_samples, [self.num_enn_samples, num_test])
+        chex.assert_shape(enn_samples, [self.num_enn_samples, num_val])
         enn_mean = jnp.mean(enn_samples, axis=0)
         enn_std = jnp.std(enn_samples, axis=0) + self.std_ridge
 
         # Compute the KL divergence between this and reference posterior
         batched_kl = jax.jit(jax.vmap(_kl_gaussian))
         kl_estimates = batched_kl(posterior_mean, posterior_std, enn_mean, enn_std)
-        chex.assert_shape(kl_estimates, [num_test])
+        chex.assert_shape(kl_estimates, [num_val])
         kl_estimate = jnp.mean(kl_estimates)
 
-        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean)/posterior_mean))
-        error_std = jnp.mean(jnp.abs((posterior_std - enn_std)/posterior_std))
+        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean) / posterior_mean))
+        error_std = jnp.mean(jnp.abs((posterior_std - enn_std) / posterior_std))
 
         result = testbed_base.ENNQuality(
-            kl_estimate,
-            {
-                "mean_error": error_mean,
-                "std_error": error_std,
-            }
+            kl_estimate, {"mean_error": error_mean, "std_error": error_std,}
         )
 
         return result
 
     def evaluate_quality_batched(
-        self, batched_sampler: testbed_base.EpistemicSampler, num_samples = None
+        self, batched_sampler: testbed_base.EpistemicSampler, num_samples=None
     ) -> testbed_base.ENNQuality:
         """Computes KL estimate on mean functions for tau=1 only."""
         # Extract useful quantities from the gp sampler.
@@ -240,18 +232,152 @@ class TestbedGPRegression(testbed_base.TestbedProblem):
         chex.assert_shape(kl_estimates, [num_test])
         kl_estimate = jnp.mean(kl_estimates)
 
-        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean)/posterior_mean))
-        error_std = jnp.mean(jnp.abs((posterior_std - enn_std)/posterior_std))
+        error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean) / posterior_mean))
+        error_std = jnp.mean(jnp.abs((posterior_std - enn_std) / posterior_std))
 
         result = testbed_base.ENNQuality(
-            kl_estimate,
-            {
-                "mean_error": error_mean,
-                "std_error": error_std,
-            }
+            kl_estimate, {"mean_error": error_mean, "std_error": error_std,}
         )
 
         return result
+
+    def find_best_samples_batched(
+        self, batched_fixed_sampler: testbed_base.EpistemicSampler, all_samples
+    ) -> testbed_base.ENNQuality:
+        """Computes KL estimate on mean functions for tau=1 only."""
+        # Extract useful quantities from the gp sampler.
+
+        results = {}
+
+        x_test = self.data_sampler.x_test
+        num_test = x_test.shape[0]
+        posterior_mean_test = self.data_sampler.test_mean[:, 0]
+        posterior_std_test = jnp.sqrt(jnp.diag(self.data_sampler.test_cov))
+        posterior_std_test += self.std_ridge
+
+        x_val = self.data_sampler.x_val
+        num_val = x_val.shape[0]
+        posterior_mean_val = self.data_sampler.val_mean[:, 0]
+        posterior_std_val = jnp.sqrt(jnp.diag(self.data_sampler.val_cov))
+        posterior_std_val += self.std_ridge
+
+        def evaluate(selected_samples, is_test):
+
+            num_samples = len(selected_samples)
+
+            if is_test:
+                x = x_test
+                num = num_test
+                posterior_mean = posterior_mean_test
+                posterior_std = posterior_std_test
+                posterior_std = posterior_std_test
+            else:
+                x = x_val
+                num = num_val
+                posterior_mean = posterior_mean_val
+                posterior_std = posterior_std_val
+                posterior_std = posterior_std_val
+
+            # Compute the mean and std of ENN posterior
+            enn_samples = batched_fixed_sampler(x, selected_samples)
+            enn_samples = enn_samples[:, :, 0]
+            chex.assert_shape(enn_samples, [num_samples, num])
+            enn_mean = jnp.mean(enn_samples, axis=0)
+            enn_std = jnp.std(enn_samples, axis=0) + self.std_ridge
+
+            # Compute the KL divergence between this and reference posterior
+            batched_kl = jax.jit(jax.vmap(_kl_gaussian))
+            kl_estimates = batched_kl(posterior_mean, posterior_std, enn_mean, enn_std)
+            chex.assert_shape(kl_estimates, [num])
+            kl_estimate = jnp.mean(kl_estimates)
+
+            error_mean = jnp.mean(jnp.abs((posterior_mean - enn_mean) / posterior_mean))
+            error_std = jnp.mean(jnp.abs((posterior_std - enn_std) / posterior_std))
+
+            result = testbed_base.ENNQuality(
+                kl_estimate, {"mean_error": error_mean, "std_error": error_std,}
+            )
+
+            return result
+
+        def find_first_pair():
+
+            best_kl = None
+            best_samples = None
+
+            for i in range(0, len(all_samples)):
+                for q in range(i + 1, len(all_samples)):
+                    kl = evaluate(jnp.array([all_samples[i], all_samples[q]]), False)
+
+                    if (best_kl is None) or (best_kl.kl_estimate > kl.kl_estimate):
+                        print(
+                            "pair bkl kl",
+                            best_kl.kl_estimate if best_kl is not None else None,
+                            kl.kl_estimate,
+                            "i",
+                            i,
+                            "/",
+                            len(all_samples),
+                            end="\r",
+                        )
+                        best_kl = kl
+                        best_samples = [i, q]
+
+            return best_samples, best_kl
+
+        def add_sample_to_best(best_samples):
+
+            best_kl = None
+            best_addition = None
+
+            for i in range(0, len(all_samples)):
+                if i not in best_samples:
+                    kl = evaluate(
+                        jnp.array([all_samples[s] for s in [*best_samples, i]]), False
+                    )
+                    if (best_kl is None) or (best_kl.kl_estimate > kl.kl_estimate):
+                        print(
+                            len(best_samples) + 1,
+                            "bkl kl",
+                            best_kl.kl_estimate if best_kl is not None else None,
+                            kl.kl_estimate,
+                            "i",
+                            i,
+                            "/",
+                            len(all_samples),
+                            end="\r",
+                        )
+                        best_kl = kl
+                        best_addition = i
+
+            return [*best_samples, best_addition], best_kl
+
+        # best_samples, best_val_kl = find_first_pair()
+        # best_kl = evaluate(jnp.array([all_samples[s] for s in best_samples]), True)
+        # print("--", len(best_samples), "kl", best_kl.kl_estimate)
+
+        # results[2] = {
+        #     "best_samples": best_samples,
+        #     "best_kl": best_kl,
+        #     "best_val_kl": best_val_kl,
+        # }
+
+        best_samples = []
+
+        for num_samples in range(1, len(all_samples)):
+            best_samples, best_val_kl = add_sample_to_best(best_samples)
+            best_kl = evaluate(jnp.array([all_samples[s] for s in best_samples]), True)
+            print("--", len(best_samples), "kl", best_kl.kl_estimate)
+
+            if num_samples > 1:
+
+                results[num_samples] = {
+                    "best_samples": best_samples,
+                    "best_kl": best_kl,
+                    "best_val_kl": best_val_kl,
+                }
+
+        return results
 
 
 def _kl_gaussian(mean_1: float, std_1: float, mean_2: float, std_2: float) -> float:

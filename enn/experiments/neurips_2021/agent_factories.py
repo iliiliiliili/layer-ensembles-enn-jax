@@ -101,7 +101,8 @@ def make_subsample_ensemble_ctor(
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
             seed=seed,
-            inference_samples=inference_samples
+            inference_samples=inference_samples,
+            max_num_samples=num_ensemble,
         )
 
     return make_agent_config
@@ -172,13 +173,14 @@ def make_layer_ensemble_cor_ctor(
         return agents.VanillaEnnConfig(
             enn_ctor=make_enn,
             loss_ctor=enn_losses.batched_gaussian_regression_loss(
-                num_samples, noise_scale, l2_weight_decay=0
+                min(num_samples, 2000), noise_scale, l2_weight_decay=0
             ),
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
             seed=seed,
             inference_samples=inference_samples,
-            train_num_samples=num_samples,
+            train_num_samples=min(num_samples, 2000),
+            max_num_samples=num_samples,
             batched_inference=True,
         )
 
@@ -293,7 +295,8 @@ def make_true_layer_ensemble_einsum_ctor(
             num_batches=1000,  # Irrelevant for bandit
             logger=loggers.make_default_logger("experiment", time_delta=0),
             seed=seed,
-            inference_samples=inference_samples
+            inference_samples=inference_samples,
+            max_num_samples=num_samples,
         )
 
     return make_agent_config
@@ -618,13 +621,13 @@ def make_layer_ensemble_cor_sweep() -> List[AgentCtorConfig]:
     sweep = []
 
     for num_ensemble, inference_samples in [
-        (2, ["full"]),
-        (3, ["full"]),
+        # (2, [2, 3, "full"]),
+        # (3, [2, 3, 4, "full"]),
         # (5, [2, 3, 5, "full"]),
         # (6, [2, 3, 5, 10, "full"]),
         # (8, [2, 3, 5, 10, "full"]),
         # (10, [2, 3, 5, 10, 20, "full"]),
-        # (30, [2, 3, 5, 10, 20, 100, "full"]),
+        (30, [2, 3, 5, 10, 20, 100, "full"]),
     ]:
         for noise_scale in [1]:
             for prior_scale in [1]:

@@ -106,13 +106,16 @@ def _make_layer_ensemble_gaussian_noise(noise_std: float, seed: int, factor=50) 
         """Assumes integer index for ensemble."""
         chex.assert_shape(data_index, (None, 1))
 
-        total_index = 0
-        f = 1
-        for i in input_index[0, :]:
-            total_index += i * f
-            f *= factor
+        if len(input_index.shape) > 1:
+            total_index = 0
+            f = 1
+            for i in input_index[0, :]:
+                total_index += i * f
+                f *= factor
 
-            index = jnp.repeat(total_index, len(data_index))
+                index = jnp.repeat(total_index, len(data_index))
+        else:
+            index = index = jnp.repeat(input_index[0], len(data_index))
         data_keys = _make_key(data_index, seed)
         batch_keys = batch_fold_in(data_keys, index)
         samples = batch_normal(batch_keys)[:, None]
