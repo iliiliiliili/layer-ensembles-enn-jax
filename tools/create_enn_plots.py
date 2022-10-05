@@ -24,7 +24,7 @@ from plotnine.guides import guide_axis, guide_legend, guide
 from glob import glob
 import re
 
-limit_std = 10
+limit_std = 100
 
 tex_template_file = "tools/tex_table_template.tex"
 
@@ -37,7 +37,8 @@ with open(tex_template_file, "r") as f:
 # files = glob("results_mserr*") + glob("results_lrelu*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
 # files = glob("results/results_mserr_layer_ensemble*")
-files = glob("results/results_best_selected_val_*") + glob("results/results_multi_indexed_val_*")
+# files = glob("results/results_best_selected_val_*") + glob("results/results_multi_indexed_val_*")
+files = glob("results/results_batched_multi_indexed_val_*")
 
 float_fields = [
     "noise_scale",
@@ -958,7 +959,7 @@ def plot_ensemble_summary(
         ggplot(frame)
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
-        + facet_grid("num_ensemble ~ agent", space="free", scales="free_y")
+        + facet_grid("num_ensemble ~ agent", space="free", scales="free")
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
         + geom_point(aes(colour="agent"), size=2, stroke=0.1)
@@ -1027,6 +1028,76 @@ def plot_all_hyperexperiment_frames(
                     agent,
                     "hyperexperiment_enn_plot_" + experiment_param + "_" + agent,
                 )
+
+
+def plot_optimized_layer_ensemble_speed():
+
+    frame = DataFrame(
+        {
+            "Ensembles": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+            ],
+            "Speed Up": [
+                196.02435110737994 / 111.8295512448305,
+                57.80796495367296 / 32.03804974678484,
+                24.843940387464368 / 5.64624682777498,
+                16.562746831583034 / 1.5746171174634735,
+                9.675929083702409 / 0.6817255399724734,
+                5.729144740571466 / 0.3516358885652403,
+                3.590836155147295 / 0.20132821390009117,
+                2.3235564106985414 / 0.12423794040411039,
+                1.466085111750885 / 0.08107119449007497,
+            ],
+            "Memory Save": [
+                (1234 - 954) / (1162 - 954),
+                (1352 - 976) / (1252 - 976),
+                (1516 - 998) / (1342 - 998),
+                (1762 - 1020) / (1434 - 1020),
+                (2140 - 1044) / (1524 - 1044),
+                (2702 - 1066) / (1614 - 1066),
+                (3518 - 1088) / (1706 - 1088),
+                (4664 - 1110) / (1798 - 1110),
+                (6226 - 1132) / (1890 - 1132),
+            ],
+        }
+    )
+
+    def plot_frame(frame, output_file_name):
+
+        plot1 = (
+            ggplot(frame)
+            + aes(x="Ensembles", y="Speed Up")
+            + geom_point(
+                aes(),
+            )
+            + geom_line()
+        )
+
+        plot1.save("plots/" + output_file_name + "_speed.png", dpi=600)
+
+        plot2 = (
+            ggplot(frame)
+            + aes(x="Ensembles", y="Memory Save")
+            + geom_point(
+                aes(),
+            )
+            + geom_line()
+        )
+
+        plot2.save("plots/" + output_file_name + "_memory.png", dpi=600)
+
+    plot_frame(frame, "optimized_layer_ensemble")
+
+
+plot_optimized_layer_ensemble_speed()
 
 
 # plot_summary_vnn(files, [10, 100, 1000])
