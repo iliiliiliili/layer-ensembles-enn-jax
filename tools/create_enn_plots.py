@@ -27,6 +27,7 @@ import re
 limit_std = 100
 
 tex_template_file = "tools/tex_table_template.tex"
+use_ranked_layer_enbsemble = True
 
 with open(tex_template_file, "r") as f:
     tex_template = f.read()
@@ -38,7 +39,8 @@ with open(tex_template_file, "r") as f:
 # files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
 # files = glob("results/results_mserr_layer_ensemble*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_multi_indexed_val_*")
-files = glob("results/results_batched_multi_indexed_val_*")
+# files = glob("results/results_batched_multi_indexed_val_*") + glob("results/results_ranked_batched_multi_indexed_val_*")
+files = glob("results/results_ranked_batched_multi_indexed_val_*")
 
 float_fields = [
     "noise_scale",
@@ -350,16 +352,34 @@ summary_select_agent_params = {
 }
 
 def add_true_layer_ensemble_einsum_cor_summary_params():
-    for num_ensemble, inference_samples in [
+
+    if use_ranked_layer_enbsemble:
+        all_nens_samples = [
+        (2, [*range(2, 2 ** 3)]),
+        (3, [*range(2, 3 ** 3)]),
+        (5, [*range(2, 5 ** 3)]),
+        # (6, [*range(2, 6 ** 3)]),
+        # (8, [*range(2, 8 ** 3)]),
+        # (10, [*range(2, 10 ** 3)]),
+    ]
+    else:
+        all_nens_samples = [
         (2, [2, 3, "full"]),
         (3, [2, 3, 4, "full"]),
         (5, [2, 3, 5, "full"]),
         (6, [2, 3, 5, 10, "full"]),
         (8, [2, 3, 5, 10, "full"]),
         (10, [2, 3, 5, 10, 20, "full"]),
-    ]:
+    ]
+
+    for num_ensemble, inference_samples in all_nens_samples:
         for samples in inference_samples:
-            indexer = num_ensemble ** 3 if samples == "full" else samples * num_ensemble 
+
+            if use_ranked_layer_enbsemble:
+                indexer = samples
+            else:
+                indexer = num_ensemble ** 3 if samples == "full" else samples * num_ensemble
+
             params = {
                 "agent_suffix": "_" + str(num_ensemble) + "s" + str(indexer) + ("f" if samples == "full" else ""),
                 "noise_scale": [1.0],
@@ -373,13 +393,13 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
 
 def add_subsample_ensemble_summary_params():
     for num_ensemble, inference_samples in [
-        (2, [2, 100]),
-        (3, [2, 3, 100]),
-        (5, [2, 3, 5, 100]),
-        (6, [2, 3, 5, 6, 100]),
-        (8, [2, 3, 5, 8, 100]),
-        (10, [2, 3, 5, 10, 100]),
-        (30, [2, 3, 5, 10, 20, 30, 100]),
+        (2, [2]),
+        (3, [2, 3]),
+        (5, [2, 3, 5]),
+        (6, [2, 3, 5, 6]),
+        (8, [2, 3, 5, 8]),
+        (10, [2, 3, 5, 10]),
+        (30, [2, 3, 5, 10, 20, 30]),
     ]:
         for samples in inference_samples:
             indexer = samples 
@@ -862,6 +882,7 @@ def plot_summary(
         "summary_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
     )
 
+
 def plot_ensemble_summary(
     files,
     allowed_input_dims,
@@ -959,18 +980,19 @@ def plot_ensemble_summary(
         ggplot(frame)
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
-        + facet_grid("num_ensemble ~ agent", space="free", scales="free")
+        # + facet_grid("num_ensemble ~ agent", space="free", scales="free")
+        + facet_wrap(["num_ensemble"], nrow=2)
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
         + geom_point(aes(colour="agent"), size=2, stroke=0.1)
         + geom_errorbar(
             aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.2, size=0.7,
         )
-        + theme(axis_title=element_text(size=15), axis_text=element_text(size=4), figure_size=(10, 10))
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=8))
         + scale_color_discrete(guide=False)
         # + scale_x_discrete(guide=guide_legend())
         + ylab("Mean KL")
-        + xlab("Method")
+        + xlab("Number of samples")
     )
     plot.save(
         "plots/summary_ensemble_enn_plot_id"
@@ -986,6 +1008,119 @@ def plot_ensemble_summary(
         "all",
         "summary_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
     )
+
+def plot_ranked_ensemble_summary(
+    files,
+    allowed_input_dims,
+    parse_experiment_parameters=parse_enn_experiment_parameters,
+):
+
+    all_agent_frames = {}
+
+    for file in files:
+        agent_frames = read_data(file)
+        experiment_params = parse_experiment_parameters(file)
+
+        if experiment_params["input_dim"] not in allowed_input_dims:
+            print("scipping file", file, "due to input dim filter")
+            continue
+
+        for agent in agent_frames.keys():
+
+            # if agent in ["layer_ensemble"]:
+            #     continue
+
+            frame = agent_frames[agent]
+
+            if agent not in all_agent_frames:
+                all_agent_frames[agent] = []
+
+            all_agent_frames[agent].append(frame)
+
+    data = {
+        "agent_full": [],
+        "agent": [],
+        "mean": [],
+        "std": [],
+        "num_ensemble": [],
+        "indexer": [],
+    }
+
+    for agent, all_frames in all_agent_frames.items():
+
+        if agent not in summary_select_agent_params:
+            print(f"Skippng agent {agent} due to summary_select_agent_params filter")
+            continue
+
+        params = agent_plot_params[agent]
+        filters = summary_select_agent_params[agent]
+
+
+        for filter in filters:
+
+            frames = all_frames
+            old_frames = None
+            agent_suffix = ""
+
+            for key, value in filter.items():
+
+                if key == "agent_suffix":
+                    agent_suffix = value
+                    continue
+
+                old_frames = frames
+                frames = [f[f[key].isin(value)] for f in frames]
+                if len(frames[0]) <= 0:
+                    raise ValueError("Empty frame after filtering")
+
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
+                len(f) for f in frames
+            )
+
+            data["agent_full"].append((agent + agent_suffix).replace("_", "\n"))
+            data["agent"].append(agent)
+            data["mean"].append(mean)
+            data["std"].append(min(limit_std, std))
+            data["num_ensemble"].append(int(frames[0]["num_ensemble"]))
+            data["indexer"].append(int(frames[0]["indexer"]))
+
+    frame = DataFrame(data)
+
+    plot = (
+        ggplot(frame)
+        + aes(x="indexer", y="mean")
+        + geom_hline(yintercept=1)
+        # + facet_grid("num_ensemble ~ agent", space="free", scales="free")
+        + facet_wrap(["num_ensemble"], ncol=1)
+        + scale_y_continuous(trans="log10")
+        + scale_x_continuous(trans="log10")
+        + geom_point(aes(colour="agent"), size=2, stroke=0.1)
+        + geom_errorbar(
+            aes(colour="factor(num_ensemble)", ymin="mean-std", ymax="mean+std"), width=0.1, size=0.4,
+        )
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=8))
+        + scale_color_discrete(guide=False)
+        # + scale_x_discrete(guide=guide_legend())
+        + ylab("Mean KL")
+        + xlab("Number of samples")
+    )
+    plot.save(
+        "plots/summary_ensemble_enn_plot_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".png",
+        dpi=600,
+    )
+    frame.to_csv(
+        "plots/summary_ensemble_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+    )
+    create_tex_table(
+        frame,
+        "all",
+        "summary_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+    )
+
+
 
 
 def plot_all_hyperexperiment_frames(
@@ -1097,12 +1232,15 @@ def plot_optimized_layer_ensemble_speed():
     plot_frame(frame, "optimized_layer_ensemble")
 
 
-plot_optimized_layer_ensemble_speed()
+# plot_optimized_layer_ensemble_speed()
 
 
 # plot_summary_vnn(files, [10, 100, 1000])
 
+# for ids in summary_input_dims:
+#     plot_ensemble_summary(files, ids)
+
 for ids in summary_input_dims:
-    plot_ensemble_summary(files, ids)
+    plot_ranked_ensemble_summary(files, ids)
 # plot_all_hyperexperiment_frames(files)
 # plot_all_single_frames(files)
