@@ -15,6 +15,7 @@ from plotnine import (
     ylab,
     xlab,
     scale_color_discrete,
+    labeller
 )
 from plotnine.data import economics
 from pandas import Categorical, DataFrame
@@ -27,7 +28,7 @@ import re
 limit_std = 100
 
 tex_template_file = "tools/tex_table_template.tex"
-use_ranked_layer_enbsemble = True
+use_ranked_layer_enbsemble = False
 
 with open(tex_template_file, "r") as f:
     tex_template = f.read()
@@ -36,11 +37,12 @@ with open(tex_template_file, "r") as f:
 # files = glob("results_id*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
-# files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
+files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
 # files = glob("results/results_mserr_layer_ensemble*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_multi_indexed_val_*")
-# files = glob("results/results_batched_multi_indexed_val_*") + glob("results/results_ranked_batched_multi_indexed_val_*")
-files = glob("results/results_ranked_batched_multi_indexed_val_*")
+# files = glob("results/results_batched_multi_indexed_val_*")
+# files = glob("results/results_ranked_batched_multi_indexed_val_*")
+# files = glob("results1/results_best_selected_val_true_layer_ensemble_einsum_cor*")
 
 float_fields = [
     "noise_scale",
@@ -65,9 +67,7 @@ int_list_fields = [
     "num_ensembles",
 ]
 
-rename = {
-    "num_ensembles": "num_ensemble"
-}
+rename = {"num_ensembles": "num_ensemble"}
 
 field_tex_names = {
     "kl": "KL",
@@ -197,9 +197,9 @@ agent_plot_params = {
     "true_layer_ensemble_einsum_cor": {
         "x": "num_ensemble",
         "y": "kl",
-        "facet": ["noise_scale", "prior_scale", "sample_type"],
+        "facet": ["noise_scale", "sample_type"],
         "colour": "factor(num_layers)",
-        "shape": "factor(hidden_size)",
+        "shape": "factor(prior_scale)",
     },
 }
 
@@ -351,26 +351,27 @@ summary_select_agent_params = {
     "subsample_ensemble": [],
 }
 
+
 def add_true_layer_ensemble_einsum_cor_summary_params():
 
     if use_ranked_layer_enbsemble:
         all_nens_samples = [
-        (2, [*range(2, 2 ** 3)]),
-        (3, [*range(2, 3 ** 3)]),
-        (5, [*range(2, 5 ** 3)]),
-        # (6, [*range(2, 6 ** 3)]),
-        # (8, [*range(2, 8 ** 3)]),
-        # (10, [*range(2, 10 ** 3)]),
-    ]
+            (2, [*range(2, 2 ** 3)]),
+            (3, [*range(2, 3 ** 3)]),
+            (5, [*range(2, 5 ** 3)]),
+            (6, [*range(2, 6 ** 3)]),
+            # (8, [*range(2, 8 ** 3)]),
+            # (10, [*range(2, 10 ** 3)]),
+        ]
     else:
         all_nens_samples = [
-        (2, [2, 3, "full"]),
-        (3, [2, 3, 4, "full"]),
-        (5, [2, 3, 5, "full"]),
-        (6, [2, 3, 5, 10, "full"]),
-        (8, [2, 3, 5, 10, "full"]),
-        (10, [2, 3, 5, 10, 20, "full"]),
-    ]
+            (2, [2, 3, "full"]),
+            (3, [2, 3, 4, "full"]),
+            (5, [2, 3, 5, "full"]),
+            (6, [2, 3, 5, 10, "full"]),
+            (8, [2, 3, 5, 10, "full"]),
+            (10, [2, 3, 5, 10, 20, "full"]),
+        ]
 
     for num_ensemble, inference_samples in all_nens_samples:
         for samples in inference_samples:
@@ -378,10 +379,16 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
             if use_ranked_layer_enbsemble:
                 indexer = samples
             else:
-                indexer = num_ensemble ** 3 if samples == "full" else samples * num_ensemble
+                indexer = (
+                    num_ensemble ** 3 if samples == "full" else samples * num_ensemble
+                )
 
             params = {
-                "agent_suffix": "_" + str(num_ensemble) + "s" + str(indexer) + ("f" if samples == "full" else ""),
+                "agent_suffix": "_"
+                + str(num_ensemble)
+                + "s"
+                + str(indexer)
+                + ("f" if samples == "full" else ""),
                 "noise_scale": [1.0],
                 "prior_scale": [1.0],
                 "num_layers": [2],
@@ -390,6 +397,7 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
                 "indexer": [indexer],
             }
             summary_select_agent_params["true_layer_ensemble_einsum_cor"].append(params)
+
 
 def add_subsample_ensemble_summary_params():
     for num_ensemble, inference_samples in [
@@ -402,7 +410,7 @@ def add_subsample_ensemble_summary_params():
         (30, [2, 3, 5, 10, 20, 30]),
     ]:
         for samples in inference_samples:
-            indexer = samples 
+            indexer = samples
             params = {
                 "agent_suffix": "_" + str(num_ensemble) + "s" + str(indexer),
                 "noise_scale": [1.0],
@@ -413,6 +421,7 @@ def add_subsample_ensemble_summary_params():
                 "indexer": [indexer],
             }
             summary_select_agent_params["subsample_ensemble"].append(params)
+
 
 add_true_layer_ensemble_einsum_cor_summary_params()
 add_subsample_ensemble_summary_params()
@@ -647,7 +656,7 @@ def plot_all_single_frames(files):
                 "enn_plot_"
                 + agent
                 + "_"
-                + file.replace(".txt", "").replace("results/", ""),
+                + file.replace(".txt", "").replace("results/", "").replace("results1/", ""),
             )
 
 
@@ -806,7 +815,6 @@ def plot_summary(
         params = agent_plot_params[agent]
         filters = summary_select_agent_params[agent]
 
-
         for filter in filters:
 
             frames = all_frames
@@ -824,7 +832,9 @@ def plot_summary(
                 if len(frames[0]) <= 0:
                     raise ValueError("Empty frame after filtering")
 
-            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(
+                len(f) for f in frames
+            )
             std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
                 len(f) for f in frames
             )
@@ -929,7 +939,6 @@ def plot_ensemble_summary(
         params = agent_plot_params[agent]
         filters = summary_select_agent_params[agent]
 
-
         for filter in filters:
 
             frames = all_frames
@@ -947,48 +956,34 @@ def plot_ensemble_summary(
                 if len(frames[0]) <= 0:
                     raise ValueError("Empty frame after filtering")
 
-            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(
+                len(f) for f in frames
+            )
             std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
                 len(f) for f in frames
             )
 
             data["agent_full"].append((agent + agent_suffix).replace("_", "\n"))
-            data["agent"].append(agent)
+            data["agent"].append(agent.replace("subsample_ensemble", "Deep Ensembles").replace("true_layer_ensemble_einsum_cor", "Layer Ensembles"))
             data["mean"].append(mean)
             data["std"].append(min(limit_std, std))
             data["num_ensemble"].append(int(frames[0]["num_ensemble"]))
             data["indexer"].append(int(frames[0]["indexer"]))
 
     frame = DataFrame(data)
-    # frame["agent"] = Categorical(
-    #     frame["agent"],
-    #     [
-    #         "dropout",
-    #         "bbb",
-    #         "vnn",
-    #         "hypermodel",
-    #         "ensemble",
-    #         "layer_ensemble",
-    #         "layer_ensemble_cor",
-    #         "layer_ensemble_einsum_cor",
-    #         "true_layer_ensemble_einsum",
-    #         "true_layer_ensemble_einsum_cor",
-    #     ],
-    # )
-
     plot = (
         ggplot(frame)
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
         # + facet_grid("num_ensemble ~ agent", space="free", scales="free")
-        + facet_wrap(["num_ensemble"], nrow=2)
+        + facet_wrap(["num_ensemble"], nrow=2, labeller=labeller(cols=lambda x: str(x) + " ensembles"))
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
         + geom_point(aes(colour="agent"), size=2, stroke=0.1)
         + geom_errorbar(
-            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.2, size=0.7,
+            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.3, size=0.9,
         )
-        + theme(axis_title=element_text(size=15), axis_text=element_text(size=8))
+        + theme(axis_title=element_text(size=17), axis_text=element_text(size=10), figure_size=(6, 4))
         + scale_color_discrete(guide=False)
         # + scale_x_discrete(guide=guide_legend())
         + ylab("Mean KL")
@@ -1001,13 +996,16 @@ def plot_ensemble_summary(
         dpi=600,
     )
     frame.to_csv(
-        "plots/summary_ensemble_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+        "plots/summary_ensemble_enn_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".csv"
     )
     create_tex_table(
         frame,
         "all",
         "summary_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
     )
+
 
 def plot_ranked_ensemble_summary(
     files,
@@ -1055,7 +1053,6 @@ def plot_ranked_ensemble_summary(
         params = agent_plot_params[agent]
         filters = summary_select_agent_params[agent]
 
-
         for filter in filters:
 
             frames = all_frames
@@ -1073,7 +1070,9 @@ def plot_ranked_ensemble_summary(
                 if len(frames[0]) <= 0:
                     raise ValueError("Empty frame after filtering")
 
-            mean = sum(sum(f[params["y"]]) for f in frames) / sum(len(f) for f in frames)
+            mean = sum(sum(f[params["y"]]) for f in frames) / sum(
+                len(f) for f in frames
+            )
             std = sum(sum((f[params["y"]] - mean) ** 2) for f in frames) / sum(
                 len(f) for f in frames
             )
@@ -1092,35 +1091,37 @@ def plot_ranked_ensemble_summary(
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
         # + facet_grid("num_ensemble ~ agent", space="free", scales="free")
-        + facet_wrap(["num_ensemble"], ncol=1)
+        + facet_wrap(["num_ensemble"], ncol=3, labeller=labeller(cols=lambda x: str(x) + " ensembles"))
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
-        + geom_point(aes(colour="agent"), size=2, stroke=0.1)
+        + geom_point(aes(colour="agent"), size=3, stroke=0.1)
         + geom_errorbar(
-            aes(colour="factor(num_ensemble)", ymin="mean-std", ymax="mean+std"), width=0.1, size=0.4,
+            aes(colour="'#FFFF00'", ymin="mean-std", ymax="mean+std"),
+            width=0.07,
+            size=0.9,
         )
-        + theme(axis_title=element_text(size=15), axis_text=element_text(size=8))
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=8), figure_size=(12, 4))
         + scale_color_discrete(guide=False)
         # + scale_x_discrete(guide=guide_legend())
         + ylab("Mean KL")
         + xlab("Number of samples")
     )
     plot.save(
-        "plots/summary_ensemble_enn_plot_id"
+        "plots/summary_ranked_ensemble_enn_plot_id"
         + "_".join([str(a) for a in allowed_input_dims])
         + ".png",
         dpi=600,
     )
     frame.to_csv(
-        "plots/summary_ensemble_enn_id" + "_".join([str(a) for a in allowed_input_dims]) + ".csv"
+        "plots/summary_ranked_ensemble_enn_id"
+        + "_".join([str(a) for a in allowed_input_dims])
+        + ".csv"
     )
     create_tex_table(
         frame,
         "all",
-        "summary_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+        "summary_ranked_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
     )
-
-
 
 
 def plot_all_hyperexperiment_frames(
@@ -1169,17 +1170,7 @@ def plot_optimized_layer_ensemble_speed():
 
     frame = DataFrame(
         {
-            "Ensembles": [
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-            ],
+            "Ensembles": [2, 3, 4, 5, 6, 7, 8, 9, 10,],
             "Speed Up": [
                 196.02435110737994 / 111.8295512448305,
                 57.80796495367296 / 32.03804974678484,
@@ -1210,10 +1201,9 @@ def plot_optimized_layer_ensemble_speed():
         plot1 = (
             ggplot(frame)
             + aes(x="Ensembles", y="Speed Up")
-            + geom_point(
-                aes(),
-            )
-            + geom_line()
+            + geom_point(aes(), size=4, stroke=0.1)
+            + geom_line(size=1)
+            + theme(axis_title=element_text(size=20), axis_text=element_text(size=16))
         )
 
         plot1.save("plots/" + output_file_name + "_speed.png", dpi=600)
@@ -1221,10 +1211,9 @@ def plot_optimized_layer_ensemble_speed():
         plot2 = (
             ggplot(frame)
             + aes(x="Ensembles", y="Memory Save")
-            + geom_point(
-                aes(),
-            )
-            + geom_line()
+            + geom_point(aes(), size=4, stroke=0.1)
+            + geom_line(size=1)
+            + theme(axis_title=element_text(size=20), axis_text=element_text(size=16))
         )
 
         plot2.save("plots/" + output_file_name + "_memory.png", dpi=600)
@@ -1238,9 +1227,10 @@ def plot_optimized_layer_ensemble_speed():
 # plot_summary_vnn(files, [10, 100, 1000])
 
 # for ids in summary_input_dims:
-#     plot_ensemble_summary(files, ids)
+#     plot_ranked_ensemble_summary(files, ids)
 
 for ids in summary_input_dims:
-    plot_ranked_ensemble_summary(files, ids)
+    plot_ensemble_summary(files, ids)
+
 # plot_all_hyperexperiment_frames(files)
 # plot_all_single_frames(files)
