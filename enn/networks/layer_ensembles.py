@@ -612,10 +612,11 @@ class LayerEnsembleCorMLP(hk.Module):
                     last_index = index
                     last_out = outs[..., last_index]
                 elif index != last_index:
+                    results += ole(i + 1, last_out, last_sub_samples)
+
                     last_index = index
                     last_out = outs[..., last_index]
 
-                    results += ole(i + 1, last_out, last_sub_samples)
                     all_last_sub_samples.append(last_sub_samples)
                     last_sub_samples = []
 
