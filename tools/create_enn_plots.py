@@ -18,7 +18,7 @@ from plotnine import (
     labeller
 )
 from plotnine.data import economics
-from pandas import Categorical, DataFrame
+from pandas import Categorical, DataFrame, read_csv
 from plotnine.scales.limits import ylim
 from plotnine.scales.scale_xy import scale_x_discrete
 from plotnine.guides import guide_axis, guide_legend, guide
@@ -1221,6 +1221,51 @@ def plot_optimized_layer_ensemble_speed():
     plot_frame(frame, "optimized_layer_ensemble")
 
 
+def plot_summary_from_csv(
+    file,
+):
+
+    frame = read_csv(file)
+    frame = frame.sort_values(by=['mean'])
+
+    frame["agent"] = Categorical(
+        frame["agent"],
+        [
+            "dropout",
+            "bbb",
+            "vnn",
+            "hypermodel",
+            "ensemble",
+            "lens",
+        ],
+    )
+
+    plot = (
+        ggplot(frame)
+        + aes(x="agent", y="mean")
+        + geom_hline(yintercept=1)
+        +
+        # ylim(0, 2) +
+        scale_y_continuous(trans="log10")
+        + geom_point(aes(colour="agent"), size=4, stroke=0.2)
+        + geom_errorbar(
+            aes(colour="agent", ymin="mean-std", ymax="mean+std"), width=0.8, size=1.5,
+        )
+        + theme(axis_title=element_text(size=15), axis_text=element_text(size=9))
+        + scale_color_discrete(guide=False)
+        # + scale_x_discrete(guide=guide_legend())
+        + ylab("Mean KL")
+        + xlab("Method")
+    )
+    plot.save(
+        file
+        + ".png",
+        dpi=600,
+    )
+
+
+plot_summary_from_csv("plots_ranked/summary_all_enn_id10_100.csv")
+
 # plot_optimized_layer_ensemble_speed()
 
 
@@ -1229,8 +1274,8 @@ def plot_optimized_layer_ensemble_speed():
 # for ids in summary_input_dims:
 #     plot_ranked_ensemble_summary(files, ids)
 
-for ids in summary_input_dims:
-    plot_ensemble_summary(files, ids)
+# for ids in summary_input_dims:
+#     plot_ensemble_summary(files, ids)
 
 # plot_all_hyperexperiment_frames(files)
 # plot_all_single_frames(files)
