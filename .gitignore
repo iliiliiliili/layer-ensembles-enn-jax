@@ -18,3 +18,5 @@ tex/*
 *.sh
 !run_example.sh
 screenlog.*
+results
+single_runs

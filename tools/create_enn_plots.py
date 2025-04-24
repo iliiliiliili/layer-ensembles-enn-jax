@@ -34,10 +34,10 @@ with open(tex_template_file, "r") as f:
     tex_template = f.read()
 
 # files = glob("results_vnn_selected*")
-# files = glob("results_id*")
+files = glob("results/results_*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
-files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
+# files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
 # files = glob("results/results_mserr_layer_ensemble*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_multi_indexed_val_*")
 # files = glob("results/results_batched_multi_indexed_val_*")
@@ -785,7 +785,7 @@ def plot_summary(
         experiment_params = parse_experiment_parameters(file)
 
         if experiment_params["input_dim"] not in allowed_input_dims:
-            print("scipping file", file, "due to input dim filter")
+            print("Skipping file", file, "due to input dim filter")
             continue
 
         for agent in agent_frames.keys():
@@ -1264,11 +1264,11 @@ def plot_summary_from_csv(
     )
 
 
-plot_summary_from_csv("plots_ranked/summary_all_enn_id10_100.csv")
+# plot_summary_from_csv("plots_ranked/summary_all_enn_id10_100.csv")
 
 # plot_optimized_layer_ensemble_speed()
 
-
+plot_summary(files, [100])
 # plot_summary_vnn(files, [10, 100, 1000])
 
 # for ids in summary_input_dims:
