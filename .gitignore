@@ -17,6 +17,7 @@ tex/*
 
 *.sh
 !run_example.sh
+!install.sh
 screenlog.*
 results
 single_runs
