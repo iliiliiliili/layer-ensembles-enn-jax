@@ -206,14 +206,14 @@ agent_plot_params = {
 
 summary_select_agent_params = {
     "ensemble": [
-        {
-            "agent_suffix": "_3",
-            "noise_scale": [1.0],
-            "prior_scale": [1.0],
-            "num_layers": [2],
-            "hidden_size": [50],
-            "num_ensemble": [3],
-        },
+        # {
+        #     "agent_suffix": "_3",
+        #     "noise_scale": [1.0],
+        #     "prior_scale": [1.0],
+        #     "num_layers": [2],
+        #     "hidden_size": [50],
+        #     "num_ensemble": [3],
+        # },
         {
             "agent_suffix": "_10",
             "noise_scale": [1.0],
@@ -844,21 +844,23 @@ def plot_summary(
             data["std"].append(min(limit_std, std))
 
     frame = DataFrame(data)
-    # frame["agent"] = Categorical(
-    #     frame["agent"],
-    #     [
-    #         "dropout",
-    #         "bbb",
-    #         "vnn",
-    #         "hypermodel",
-    #         "ensemble",
-    #         "layer_ensemble",
-    #         "layer_ensemble_cor",
-    #         "layer_ensemble_einsum_cor",
-    #         "true_layer_ensemble_einsum",
-    #         "true_layer_ensemble_einsum_cor",
-    #     ],
-    # )
+    frame["agent"] = Categorical(
+        frame["agent"],
+        [
+            "dropout",
+            "bbb",
+            "vnn",
+            "hypermodel",
+            # "ensemble\n3",
+            "ensemble\n10",
+            "ensemble\n30",
+            # "layer_ensemble",
+            # "layer_ensemble_cor",
+            # "layer_ensemble_einsum_cor",
+            # "true_layer_ensemble_einsum",
+            # "true_layer_ensemble_einsum_cor",
+        ],
+    )
 
     plot = (
         ggplot(frame)
