@@ -93,8 +93,10 @@ class LayerEnsembleIndexer(base.EpistemicIndexer):
             return result
 
         all_samples = create_all_samples(0, self.num_ensembles, [])
+        all_samples = jnp.array(all_samples)
 
-        results = jax.random.choice(key, jnp.array(all_samples), [num_samples], replace=False)
+        choices = jax.random.choice(key, len(all_samples), [num_samples], replace=False)
+        results = all_samples[choices]
 
         return results
 
