@@ -1,4 +1,4 @@
-#/bin/bash -i
+#!/bin/bash -i
 
 conda create -n dvnn python=3.8
 

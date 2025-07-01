@@ -28,13 +28,14 @@ import re
 limit_std = 100
 
 tex_template_file = "tools/tex_table_template.tex"
-use_ranked_layer_enbsemble = False
+use_ranked_layer_enbsemble = True
 
 with open(tex_template_file, "r") as f:
     tex_template = f.read()
 
 # files = glob("results_vnn_selected*")
-files = glob("results/results_*")
+# files = glob("results/results_*")
+files = glob("results/results_*layer*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
@@ -428,12 +429,12 @@ add_subsample_ensemble_summary_params()
 
 summary_input_dims = [
     # [1],
-    # [10],
+    [10],
     # [100],
     # [1000],
-    [10, 100],
+    # [10, 100],
     # [10, 100, 1000],
-    [1, 10, 100],
+    # [1, 10, 100],
     # [1, 10, 100, 1000]
 ]
 
@@ -858,7 +859,7 @@ def plot_summary(
             # "layer_ensemble_cor",
             # "layer_ensemble_einsum_cor",
             # "true_layer_ensemble_einsum",
-            # "true_layer_ensemble_einsum_cor",
+            "true_layer_ensemble_einsum_cor",
         ],
     )
 
@@ -1270,11 +1271,11 @@ def plot_summary_from_csv(
 
 # plot_optimized_layer_ensemble_speed()
 
-plot_summary(files, [100])
+# plot_summary(files, [100])
 # plot_summary_vnn(files, [10, 100, 1000])
 
-# for ids in summary_input_dims:
-#     plot_ranked_ensemble_summary(files, ids)
+for ids in summary_input_dims:
+    plot_ranked_ensemble_summary(files, ids)
 
 # for ids in summary_input_dims:
 #     plot_ensemble_summary(files, ids)

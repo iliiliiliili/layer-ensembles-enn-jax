@@ -255,7 +255,7 @@ class BatchedRankedEnnAgent(testbed_base.TestbedAgent):
     experiment: Optional[supervised.Experiment] = None
 
     def __call__(
-        self, data: testbed_base.Data, prior: testbed_base.PriorKnowledge, evaluate: Callable = None, log_file_name: str = None,
+        self, data: testbed_base.Data, prior: testbed_base.PriorKnowledge, evaluate: Callable = None, log_file_name: str = None, max_num_samples = None,
     ) -> testbed_base.EpistemicSampler:
         """Wraps an ENN as a testbed agent, using sensible loss/bootstrapping."""
         enn = self.config.enn_ctor(prior)
@@ -284,7 +284,7 @@ class BatchedRankedEnnAgent(testbed_base.TestbedAgent):
 
         batched_fixed_sampler = extract_batched_fixed_enn_sampler(self.experiment)
 
-        all_indices = enn.indexer.batched(jax.random.PRNGKey(0), self.config.max_num_samples)
+        all_indices = enn.indexer.batched(jax.random.PRNGKey(0), self.config.max_num_samples if max_num_samples is None else max_num_samples)
 
         return batched_fixed_sampler, all_indices
 
