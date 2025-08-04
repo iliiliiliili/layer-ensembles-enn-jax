@@ -115,6 +115,26 @@ class ScaledGaussianIndexer(base.EpistemicIndexer):
             / jnp.sqrt(self.index_dim)
             * jax.random.normal(key, shape=[self.index_dim])
         )
+    
+    def batched(self, key: base.RngKey, num_samples: int) -> base.Index:
+
+        keys = jax.random.split(key, num_samples)
+
+        def create_all_samples():
+            result = []
+            for i in range(num_samples):
+                sample = (
+                    self.index_scale
+                    / jnp.sqrt(self.index_dim)
+                    * jax.random.normal(keys[i], shape=[self.index_dim])
+                )
+                result.append(sample)
+            return result
+
+        results = create_all_samples()
+        results = jnp.array(results)
+
+        return results
 
 @dataclasses.dataclass
 class GaussianWithUnitIndexer(base.EpistemicIndexer):

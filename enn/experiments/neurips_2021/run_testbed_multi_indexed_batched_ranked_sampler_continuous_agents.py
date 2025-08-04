@@ -50,9 +50,11 @@ flags.DEFINE_enum(
     "agent",
     "all",
     [
+        "all",
         "dropout",
         "bbb",
         "vnn",
+        "vnn_selected",
     ],
     "Which agent family.",
 )
@@ -71,6 +73,8 @@ def main(_):
 
     for k in ["input_dim", "data_ratio", "noise_std", "experiment_group"]:
         print("--" + str(k) + "=" + str(FLAGS.flag_values_dict()[k]))
+
+    print("--agent", FLAGS.agent)
 
     for input_dim in FLAGS.input_dim:
         for data_ratio in FLAGS.data_ratio:
@@ -118,6 +122,8 @@ def main(_):
                                 data_ratio,
                                 "noise_std",
                                 noise_std,
+                                "max_num_samples",
+                                max_num_samples,
                             )
                             print("agent_id", agent_id, "of", len(sweep))
 
@@ -177,6 +183,8 @@ def main(_):
                             + str(data_ratio)
                             + "ns"
                             + str(noise_std)
+                            + "mns"
+                            + str(max_num_samples)
                             + ".txt",
                             "a",
                         ) as f:

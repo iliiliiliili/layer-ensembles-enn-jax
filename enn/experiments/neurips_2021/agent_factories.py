@@ -895,7 +895,7 @@ def make_vnn_selected_sweep() -> List[AgentCtorConfig]:
     """Generates the benchmark sweep for paper results."""
     sweep = []
 
-    for activation in ["relu", "tanh"]:
+    for activation in ["relu"]:
         for learning_rate in [1e-3]:
             for num_layers in [2, 3]:
                 for hidden_size in [50, 100]:
@@ -903,9 +903,7 @@ def make_vnn_selected_sweep() -> List[AgentCtorConfig]:
                         for num_batches in [1000, 3000]:
                             for num_index_samples in [10, 100]:
                                 for activation_mode, global_std_mode in [
-                                    ("mean", "multiply"), ("mean+end", "multiply"),
-                                    ("mean+end", "replace"), ("none", "multiply"),
-                                    ("none", "none"),
+                                    ("mean", "multiply"),
                                 ]:
 
                                     batch_norm_mode = activation_mode

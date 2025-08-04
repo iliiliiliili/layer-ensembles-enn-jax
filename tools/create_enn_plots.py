@@ -28,14 +28,15 @@ import re
 limit_std = 100
 
 tex_template_file = "tools/tex_table_template.tex"
-use_ranked_layer_enbsemble = True
+use_ranked = True
 
 with open(tex_template_file, "r") as f:
     tex_template = f.read()
 
 # files = glob("results_vnn_selected*")
 # files = glob("results/results_*")
-files = glob("results/results_*layer*")
+# files = glob("results/results_*layer*")
+files = glob("results/results_*vnn*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
@@ -262,7 +263,7 @@ summary_select_agent_params = {
             "activation": ["relu", "tanh"],
             # "activation_mode": ["mean"],
             # "global_std_mode": ["multiply"],
-            "activation_mode": ["none"],
+            "activation_mode": ["mean"],
             "global_std_mode": ["multiply"],
             "num_layers": [3],
             "hidden_size": [100],
@@ -355,7 +356,7 @@ summary_select_agent_params = {
 
 def add_true_layer_ensemble_einsum_cor_summary_params():
 
-    if use_ranked_layer_enbsemble:
+    if use_ranked:
         all_nens_samples = [
             (2, [*range(2, 2 ** 3)]),
             (3, [*range(2, 3 ** 3)]),
@@ -377,7 +378,7 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
     for num_ensemble, inference_samples in all_nens_samples:
         for samples in inference_samples:
 
-            if use_ranked_layer_enbsemble:
+            if use_ranked:
                 indexer = samples
             else:
                 indexer = (
@@ -398,6 +399,42 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
                 "indexer": [indexer],
             }
             summary_select_agent_params["true_layer_ensemble_einsum_cor"].append(params)
+
+
+def make_vnn_ranked_params():
+
+    if use_ranked:
+
+        summary_select_agent_params["vnn"] = []
+
+        all_nens_samples = [
+            # (10, [*range(2, 10)]),
+            # (100, [*range(2, 100)]),
+            (1000, [*range(2, 1000)]),
+        ]
+
+        for max_num_samples, inference_samples in all_nens_samples:
+            for samples in inference_samples:
+
+                indexer = samples
+
+                params = {
+                    "agent_suffix": "_"
+                    + str(max_num_samples)
+                    + "s"
+                    + str(indexer)
+                    + ("f" if samples == "full" else ""),
+                    "activation": ["relu", "tanh"],
+                    "num_layers": [3],
+                    "hidden_size": [50],
+                    "num_index_samples": [100],
+                    "num_batches": ["1000"],
+                    "max_num_samples": [max_num_samples],
+                    "indexer": [indexer],
+                }
+
+                summary_select_agent_params["vnn"].append(params)
+
 
 
 def add_subsample_ensemble_summary_params():
@@ -426,6 +463,7 @@ def add_subsample_ensemble_summary_params():
 
 add_true_layer_ensemble_einsum_cor_summary_params()
 add_subsample_ensemble_summary_params()
+make_vnn_ranked_params()
 
 summary_input_dims = [
     # [1],
@@ -683,7 +721,14 @@ def plot_all_total_frames(files):
 def parse_enn_experiment_parameters(file):
 
     param_string = file.split("_")[-1]
-    input_dim, data_ratio, noise_std = re.findall(r"\d+(?:\.\d+|\d*)", param_string)
+    params = re.findall(r"\d+(?:\.\d+|\d*)", param_string)
+
+    input_dim, data_ratio, noise_std = params[:3]
+
+    max_num_samples = None
+
+    if len(params) > 3:
+        max_num_samples = int(params[3])
 
     input_dim = int(input_dim)
     data_ratio = float(data_ratio)
@@ -693,6 +738,7 @@ def parse_enn_experiment_parameters(file):
         "input_dim": input_dim,
         "data_ratio": data_ratio,
         "noise_std": noise_std,
+        "max_num_samples": max_num_samples,
     }
 
 
@@ -1014,17 +1060,27 @@ def plot_ranked_ensemble_summary(
     files,
     allowed_input_dims,
     parse_experiment_parameters=parse_enn_experiment_parameters,
+    allowed_max_num_samples=None,
 ):
 
     all_agent_frames = {}
+
+    max_num_samples = None
 
     for file in files:
         agent_frames = read_data(file)
         experiment_params = parse_experiment_parameters(file)
 
         if experiment_params["input_dim"] not in allowed_input_dims:
-            print("scipping file", file, "due to input dim filter")
+            print("Skipping file", file, "due to input dim filter")
             continue
+
+        if (allowed_max_num_samples is not None) and (experiment_params["max_num_samples"] not in allowed_max_num_samples):
+            print("Skipping file", file, "due to input dim filter")
+            continue
+
+        if (experiment_params["max_num_samples"] is not None):
+            max_num_samples = experiment_params["max_num_samples"]
 
         for agent in agent_frames.keys():
 
@@ -1067,6 +1123,13 @@ def plot_ranked_ensemble_summary(
                 if key == "agent_suffix":
                     agent_suffix = value
                     continue
+                
+                if key == "max_num_samples":
+                    if max_num_samples is None:
+                        raise ValueError("max_num_samples is not set in the experiment parameters")
+                    if value[0] != max_num_samples:
+                        raise ValueError("Empty frame after filtering")
+                    continue
 
                 old_frames = frames
                 frames = [f[f[key].isin(value)] for f in frames]
@@ -1084,7 +1147,7 @@ def plot_ranked_ensemble_summary(
             data["agent"].append(agent)
             data["mean"].append(mean)
             data["std"].append(min(limit_std, std))
-            data["num_ensemble"].append(int(frames[0]["num_ensemble"]))
+            data["num_ensemble"].append(max_num_samples if max_num_samples is not None else int(frames[0]["num_ensemble"]))
             data["indexer"].append(int(frames[0]["indexer"]))
 
     frame = DataFrame(data)
@@ -1109,21 +1172,24 @@ def plot_ranked_ensemble_summary(
         + ylab("Mean KL")
         + xlab("Number of samples")
     )
-    plot.save(
-        "plots/summary_ranked_ensemble_enn_plot_id"
+
+    name = (
+        "summary_ranked_ensemble_enn_plot_id"
         + "_".join([str(a) for a in allowed_input_dims])
-        + ".png",
+        + ("" if allowed_max_num_samples is None else "_mns" + "_".join([str(a) for a in allowed_max_num_samples]))
+    )
+
+    plot.save(
+        "plots/" + name + ".png",
         dpi=600,
     )
     frame.to_csv(
-        "plots/summary_ranked_ensemble_enn_id"
-        + "_".join([str(a) for a in allowed_input_dims])
-        + ".csv"
+        "plots/" + name + ".csv"
     )
     create_tex_table(
         frame,
         "all",
-        "summary_ranked_ensemble_enn_plot_id" + "_".join([str(a) for a in allowed_input_dims]),
+        name,
     )
 
 
@@ -1275,7 +1341,7 @@ def plot_summary_from_csv(
 # plot_summary_vnn(files, [10, 100, 1000])
 
 for ids in summary_input_dims:
-    plot_ranked_ensemble_summary(files, ids)
+    plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[1000])
 
 # for ids in summary_input_dims:
 #     plot_ensemble_summary(files, ids)
