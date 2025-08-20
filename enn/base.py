@@ -25,6 +25,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
+from optax import lamb
 import typing_extensions
 
 Array = Union[np.ndarray, jnp.DeviceArray]
@@ -42,7 +43,18 @@ class OutputWithPrior(NamedTuple):
 
     @property
     def preds(self) -> Array:
+        return self.get_preds()
+    
+    def get_preds(self) -> Array:
         return self.train + jax.lax.stop_gradient(self.prior)
+    
+    def get_batched_preds(self) -> Array:
+
+        add_stop = lambda x, y: x + jax.lax.stop_gradient(y)
+        batched_preds = jax.vmap(add_stop, in_axes=[0, 0])
+        result = batched_preds(self.train, self.prior)
+
+        return result
 
 
 Output = Union[Array, OutputWithPrior]

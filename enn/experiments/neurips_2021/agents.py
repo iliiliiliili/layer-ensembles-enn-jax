@@ -89,7 +89,7 @@ def extract_batched_fixed_enn_sampler(
     def enn_sampler(x: enn_base.Array, samples) -> enn_base.Array:
         """Generate a random sample from posterior distribution at x."""
         net_out = experiment.predict(x, samples)
-        return utils.parse_net_output(net_out)
+        return utils.parse_net_output(net_out, True)
 
     return jax.jit(enn_sampler)
 

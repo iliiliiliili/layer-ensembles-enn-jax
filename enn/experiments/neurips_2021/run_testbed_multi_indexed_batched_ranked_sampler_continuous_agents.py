@@ -54,6 +54,7 @@ flags.DEFINE_enum(
         "dropout",
         "bbb",
         "vnn",
+        "hypermodel",
         "vnn_selected",
     ],
     "Which agent family.",

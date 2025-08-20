@@ -53,6 +53,7 @@ flags.DEFINE_enum(
     "all",
     [
         "all",
+        "all_bnn",
         "dropout",
         "bbb",
         "vnn",

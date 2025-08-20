@@ -1062,6 +1062,12 @@ def make_agent_sweep(agent: str = "all") -> Sequence[AgentCtorConfig]:
             + make_vnn_sweep()
             + make_layer_ensemble_sweep()
         )
+    if agent == "all_bnn":
+        agent_sweep = (
+            make_dropout_sweep()
+            + make_hypermodel_sweep()
+            + make_bbb_sweep()
+        )
     elif agent == "all_old":
         agent_sweep = (
             make_ensemble_sweep()

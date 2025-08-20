@@ -51,10 +51,14 @@ def wrap_transformed_as_enn(transformed: hk.Transformed) -> base.EpistemicNetwor
     )
 
 
-def parse_net_output(net_out: base.Output) -> base.Array:
+def parse_net_output(net_out: base.Output, batched=False) -> base.Array:
     """Convert potential dict of network outputs to scalar prediction value."""
     if isinstance(net_out, base.OutputWithPrior):
-        return net_out.preds
+
+        if batched:
+            return net_out.get_batched_preds()
+        else:
+            return net_out.preds
     else:
         return net_out
 

@@ -67,7 +67,8 @@ setuptools.setup(
         "typing-extensions",
         "tf-keras",
         "opencv-python",
-        "plotnine"
+        "plotnine",
+        "fire"
     ],
     extras_require={"testing": testing_require,},
     classifiers=[

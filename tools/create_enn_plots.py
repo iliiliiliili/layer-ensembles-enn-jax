@@ -24,11 +24,11 @@ from plotnine.scales.scale_xy import scale_x_discrete
 from plotnine.guides import guide_axis, guide_legend, guide
 from glob import glob
 import re
+from fire import Fire
 
-limit_std = 100
+limit_std = 1000
 
 tex_template_file = "tools/tex_table_template.tex"
-use_ranked = True
 
 with open(tex_template_file, "r") as f:
     tex_template = f.read()
@@ -36,7 +36,6 @@ with open(tex_template_file, "r") as f:
 # files = glob("results_vnn_selected*")
 # files = glob("results/results_*")
 # files = glob("results/results_*layer*")
-files = glob("results/results_*vnn*")
 # files = glob("results_all_old*") + glob("results_vnn_selected*")
 # files = glob("results_mserr*") + glob("results_lrelu*")
 # files = glob("results/results_best_selected_val_*") + glob("results/results_mserr*")
@@ -354,7 +353,7 @@ summary_select_agent_params = {
 }
 
 
-def add_true_layer_ensemble_einsum_cor_summary_params():
+def add_true_layer_ensemble_einsum_cor_summary_params(use_ranked):
 
     if use_ranked:
         all_nens_samples = [
@@ -401,16 +400,14 @@ def add_true_layer_ensemble_einsum_cor_summary_params():
             summary_select_agent_params["true_layer_ensemble_einsum_cor"].append(params)
 
 
-def make_vnn_ranked_params():
+def make_vnn_ranked_params(num_samples, use_ranked):
 
     if use_ranked:
 
         summary_select_agent_params["vnn"] = []
 
         all_nens_samples = [
-            # (10, [*range(2, 10)]),
-            # (100, [*range(2, 100)]),
-            (1000, [*range(2, 1000)]),
+            (num_samples, [*range(2, num_samples)]),
         ]
 
         for max_num_samples, inference_samples in all_nens_samples:
@@ -434,6 +431,104 @@ def make_vnn_ranked_params():
                 }
 
                 summary_select_agent_params["vnn"].append(params)
+
+
+def make_dropout_ranked_params(num_samples, use_ranked):
+
+    if use_ranked:
+
+        summary_select_agent_params["dropout"] = []
+
+        all_nens_samples = [
+            (num_samples, [*range(2, num_samples)]),
+        ]
+
+        for max_num_samples, inference_samples in all_nens_samples:
+            for samples in inference_samples:
+
+                indexer = samples
+
+                params = {
+                    "agent_suffix": "_"
+                    + str(max_num_samples)
+                    + "s"
+                    + str(indexer)
+                    + ("f" if samples == "full" else ""),
+                    "dropout_rate": [0.05],
+                    "regularization_scale": [1e-6],
+                    "num_layers": [2],
+                    "hidden_size": [50],
+                    "max_num_samples": [max_num_samples],
+                    "indexer": [indexer],
+                }
+
+                summary_select_agent_params["dropout"].append(params)
+
+
+def make_bbb_ranked_params(num_samples, use_ranked):
+
+    if use_ranked:
+
+        summary_select_agent_params["bbb"] = []
+
+        all_nens_samples = [
+            (num_samples, [*range(2, num_samples)]),
+        ]
+
+        for max_num_samples, inference_samples in all_nens_samples:
+            for samples in inference_samples:
+
+                indexer = samples
+
+                params = {
+                    "agent_suffix": "_"
+                    + str(max_num_samples)
+                    + "s"
+                    + str(indexer)
+                    + ("f" if samples == "full" else ""),
+                    "sigma_0": [1e2],
+                    "learning_rate": [1e-3],
+                    "num_layers": [2],
+                    "hidden_size": [50],
+                    "max_num_samples": [max_num_samples],
+                    "indexer": [indexer],
+                }
+
+                summary_select_agent_params["bbb"].append(params)
+
+
+def make_hypermodel_ranked_params(num_samples, use_ranked):
+
+    if use_ranked:
+
+        summary_select_agent_params["hypermodel"] = []
+
+        all_nens_samples = [
+            (num_samples, [*range(2, num_samples)]),
+        ]
+
+        for max_num_samples, inference_samples in all_nens_samples:
+            for samples in inference_samples:
+
+                indexer = samples
+
+                params = {
+                    "agent_suffix": "_"
+                    + str(max_num_samples)
+                    + "s"
+                    + str(indexer)
+                    + ("f" if samples == "full" else ""),
+                    "index_dim": [20],
+                    "noise_scale": [1.0],
+                    "prior_scale": [5.0],
+                    "num_layers": [2],
+                    "hidden_size": [50],
+                    "max_num_samples": [max_num_samples],
+                    "indexer": [indexer],
+                }
+
+                summary_select_agent_params["hypermodel"].append(params)
+
 
 
 
@@ -461,13 +556,12 @@ def add_subsample_ensemble_summary_params():
             summary_select_agent_params["subsample_ensemble"].append(params)
 
 
-add_true_layer_ensemble_einsum_cor_summary_params()
+add_true_layer_ensemble_einsum_cor_summary_params(False)
 add_subsample_ensemble_summary_params()
-make_vnn_ranked_params()
 
 summary_input_dims = [
     # [1],
-    [10],
+    [10, 100],
     # [100],
     # [1000],
     # [10, 100],
@@ -1061,6 +1155,7 @@ def plot_ranked_ensemble_summary(
     allowed_input_dims,
     parse_experiment_parameters=parse_enn_experiment_parameters,
     allowed_max_num_samples=None,
+    agent_name=None
 ):
 
     all_agent_frames = {}
@@ -1076,7 +1171,7 @@ def plot_ranked_ensemble_summary(
             continue
 
         if (allowed_max_num_samples is not None) and (experiment_params["max_num_samples"] not in allowed_max_num_samples):
-            print("Skipping file", file, "due to input dim filter")
+            print("Skipping file", file, "due to allowed_max_num_samples filter")
             continue
 
         if (experiment_params["max_num_samples"] is not None):
@@ -1157,7 +1252,7 @@ def plot_ranked_ensemble_summary(
         + aes(x="indexer", y="mean")
         + geom_hline(yintercept=1)
         # + facet_grid("num_ensemble ~ agent", space="free", scales="free")
-        + facet_wrap(["num_ensemble"], ncol=3, labeller=labeller(cols=lambda x: str(x) + " ensembles"))
+        + facet_wrap(["num_ensemble"], ncol=3, labeller=labeller(cols=lambda x: ("" if agent_name is None else f"{agent_name} with ") + str(x) + " samples"))
         + scale_y_continuous(trans="log10")
         + scale_x_continuous(trans="log10")
         + geom_point(aes(colour="agent"), size=3, stroke=0.1)
@@ -1174,7 +1269,7 @@ def plot_ranked_ensemble_summary(
     )
 
     name = (
-        "summary_ranked_ensemble_enn_plot_id"
+        f"{'' if agent_name is None else agent_name + '_'}summary_ranked_ensemble_enn_plot_id"
         + "_".join([str(a) for a in allowed_input_dims])
         + ("" if allowed_max_num_samples is None else "_mns" + "_".join([str(a) for a in allowed_max_num_samples]))
     )
@@ -1340,11 +1435,68 @@ def plot_summary_from_csv(
 # plot_summary(files, [100])
 # plot_summary_vnn(files, [10, 100, 1000])
 
-for ids in summary_input_dims:
-    plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[1000])
 
 # for ids in summary_input_dims:
 #     plot_ensemble_summary(files, ids)
 
 # plot_all_hyperexperiment_frames(files)
 # plot_all_single_frames(files)
+
+
+def create_ranked_vnn_plots(num_samples=100, summary_input_dims=[[10, 100, 1000]]):
+
+    global summary_select_agent_params
+    summary_select_agent_params = {}
+    files = glob("results/results_*vnn*")
+
+    make_vnn_ranked_params(num_samples, use_ranked=True)
+
+    for ids in summary_input_dims:
+        plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[num_samples], agent_name="VNN")
+
+
+def create_ranked_bbb_plots(num_samples=100, summary_input_dims=[[1, 10, 100, 1000]]):
+
+    global summary_select_agent_params
+    summary_select_agent_params = {}
+    
+    files = glob("results/results_all_bnn*")
+    make_bbb_ranked_params(num_samples, use_ranked=True)
+
+    for ids in summary_input_dims:
+        plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[num_samples], agent_name="BBB")
+
+
+def create_ranked_dropout_plots(num_samples=100, summary_input_dims=[[1, 10, 100, 1000]]):
+
+    global summary_select_agent_params
+    summary_select_agent_params = {}
+    
+    files = glob("results/results_all_bnn*")
+    make_dropout_ranked_params(num_samples, use_ranked=True)
+
+    for ids in summary_input_dims:
+        plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[num_samples], agent_name="Dropout")
+
+
+def create_ranked_hypermodel_plots(num_samples=100, summary_input_dims=[[1, 10, 100, 1000]]):
+
+    global summary_select_agent_params
+    summary_select_agent_params = {}
+    
+    files = glob("results/results_all_bnn*")
+    make_hypermodel_ranked_params(num_samples, use_ranked=True)
+
+    for ids in summary_input_dims:
+        plot_ranked_ensemble_summary(files, ids, allowed_max_num_samples=[num_samples], agent_name="Hypermodels")
+
+def create_ranked_bnn_plots(num_samples=100, summary_input_dims=[[10, 100, 1000]]):
+
+    create_ranked_vnn_plots(num_samples=num_samples, summary_input_dims=summary_input_dims)
+    create_ranked_bbb_plots(num_samples=num_samples, summary_input_dims=summary_input_dims)
+    create_ranked_dropout_plots(num_samples=num_samples, summary_input_dims=summary_input_dims)
+    create_ranked_hypermodel_plots(num_samples=num_samples, summary_input_dims=summary_input_dims)
+
+
+if __name__ == "__main__":
+    Fire()

@@ -28,6 +28,22 @@ class PrngIndexer(base.EpistemicIndexer):
 
     def __call__(self, key: base.RngKey) -> base.Index:
         return key
+    
+    def batched(self, key: base.RngKey, num_samples: int) -> base.Index:
+
+        keys = jax.random.split(key, num_samples)
+
+        def create_all_samples():
+            result = []
+            for i in range(num_samples):
+                sample = keys[i]
+                result.append(sample)
+            return result
+
+        results = create_all_samples()
+        results = jnp.array(results)
+
+        return results
 
 
 @dataclasses.dataclass
