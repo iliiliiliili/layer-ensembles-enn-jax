@@ -1174,6 +1174,8 @@ def plot_ranked_ensemble_summary(
             print("Skipping file", file, "due to allowed_max_num_samples filter")
             continue
 
+        print("Frame", {k: len(v) for k,v in agent_frames.items()}, "from file", file)
+
         if (experiment_params["max_num_samples"] is not None):
             max_num_samples = experiment_params["max_num_samples"]
 

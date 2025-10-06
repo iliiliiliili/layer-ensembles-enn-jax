@@ -98,6 +98,31 @@ def single_run(input_dim, data_ratio, noise_std, max_num_samples):
 
         agent_id = FLAGS.agent_id_start + i
 
+        result_path = (
+            "results/results_"
+            + FLAGS.experiment_group
+            + ("_" if len(FLAGS.experiment_group) > 0 else "")
+            + FLAGS.agent
+            + "_id"
+            + str(input_dim)
+            + "dr"
+            + str(data_ratio)
+            + "ns"
+            + str(noise_std)
+            + "mns"
+            + str(max_num_samples)
+            + ".txt"
+        )
+
+        done_results = load.get_done_results(result_path)
+
+        if agent_id in done_results:
+            print(
+                f"Skipping agent_id {agent_id} because it is already in {result_path}"
+            )
+            continue
+
+
         kls = {}
 
         for seed in FLAGS.seed:
@@ -116,9 +141,6 @@ def single_run(input_dim, data_ratio, noise_std, max_num_samples):
             )
             print("agent_id", agent_id, "of", len(sweep))
 
-            # Form the appropriate agent for training
-            agent = agents.BatchedRankedEnnAgent(agent_config.config_ctor())
-
             log_file_name = (
                 "single_runs/single_run_"
                 + FLAGS.experiment_group
@@ -136,6 +158,10 @@ def single_run(input_dim, data_ratio, noise_std, max_num_samples):
                 + str(seed)
                 + ".txt"
             )
+
+            # Form the appropriate agent for training
+            agent = agents.BatchedRankedEnnAgent(agent_config.config_ctor())
+
 
             # Evaluate the quality of the ENN sampler after training
             enn_sampler, all_indices = agent(

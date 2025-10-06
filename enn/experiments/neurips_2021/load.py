@@ -16,6 +16,7 @@
 # ============================================================================
 """Loading a GP regression instance for the testbed."""
 
+import os
 from typing import Tuple
 
 import chex
@@ -135,3 +136,25 @@ def regression_load(
     num_train = int(data_ratio * input_dim)
     config = RegressionTestbedConfig(num_train, input_dim, seed, noise_std)
     return regression_load_from_config(config)
+
+
+def get_done_results(file):
+
+    if not os.path.exists(file):
+        return []
+
+    with open(file, "r") as f:
+        lines = f.readlines()
+
+        ids = []
+
+        for line in lines:
+            id, kl, *params = line.replace("\n", "").split(" ")
+
+            id = int(id)
+            kl = float(kl)
+
+            if id not in ids:
+                ids.append(id)
+
+        return ids
