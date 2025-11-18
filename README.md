@@ -13,7 +13,7 @@ Use `run_example.sh` to train a single model and evaluate its uncertainty qualit
 If you use this work for your research, you can cite it as:
 ```
 @INPROCEEDINGS{oleksiienko2023lens,
-    author={\textbf{Illia Oleksiienko} and Iosifidis, Alexandros},
+    author={Oleksiienko, Illia and Iosifidis, Alexandros},
     booktitle={IEEE International Workshop on Machine Learning for Signal Processing (MLSP)}, 
     title={Layer Ensembles}, 
     year={2023},
